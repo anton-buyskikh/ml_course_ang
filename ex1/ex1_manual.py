@@ -5,7 +5,8 @@ Created on Sun Jun 10 11:57:17 2018
 
 @author: Anton Buyskikh
 
-@brief: Linear regression with one and multiple features
+@brief: Linear regression with one and multiple features.
+Features normalization.
 """
 
 #%% libraries
@@ -54,12 +55,27 @@ def getThetaFromGradDecent(X,y,isRandTheta,alpha,niter):
 def getCost(X,y,theta):
     return np.mean((hypothesisFunc(X,theta)-y)**2)/2
 
+
+
+def normalizeFeatures(X,**kwargs):
+    if 'mean' in kwargs:
+        mean=kwargs['mean']
+    else:
+        mean=np.mean(X,axis=0)
+        
+    if 'std' in kwargs:
+        std=kwargs['std']
+    else:
+        std =np.std(X,axis=0)
+        
+    return np.divide((X-mean),std),mean,std
+
 #%% load ex1data1.txt - linear regression with one parameter
     
 data1=pd.read_csv("data/ex1data1.txt",names=["X","y"])
-x=data1.X.as_matrix()[:,None]
+x=data1.X.values[:,None]
 X=np.hstack((np.ones_like(x),x))
-y=data1.y.as_matrix()
+y=data1.y.values
 
 #%% solution via the Gradient Decent and Normal Equation
 
@@ -106,21 +122,38 @@ ax.set_xlabel(r"$\theta_0$")
 ax.set_ylabel(r"$\theta_1$")
 fig.show()
 
-
 #%% load dataset2
  
 data1=pd.read_csv("data/ex1data2.txt",names=["area","nbed","price"])
-#x=data1.X.as_matrix()[:,None]
-#X=np.hstack((np.ones_like(x),x))
-#y=data1.y.as_matrix()
+y=data1.price.values
+X=np.hstack((np.ones(len(y))[:,None],data1.area.values[:,None],data1.nbed.values[:,None]))
 
-#%%
+#%% normalize features
 
+# NB without this section the Gradient Decent does not converge
+X[:,1:],X_mean,X_std=normalizeFeatures(X[:,1:])
 
+#%% solution via the Gradient Decent and Normal Equation
 
+alpha=0.1
+niter=1500
+theta_grad,J_hist=getThetaFromGradDecent(X,y,False,alpha,niter)
+theta_norm=getThetaFromNormEquation(X,y)
 
+#%% plot convergence of the Gradient Decent
 
+fig,ax = plt.subplots() # create empty figure
+ax.plot(range(50),J_hist[:50],'.-')
+#ax.set_yscale('log')
+ax.set_xlabel("iterations")
+ax.set_ylabel("cost function J")
+fig.show()
 
+#%% prediction
 
+predict=np.array([1,1650,3],dtype='float')[None,:]
+predict[:,1:],_,_=normalizeFeatures(predict[0,1:],mean=X_mean,std=X_std)
+price=hypothesisFunc(predict,theta_norm)
 
-
+print('Predicted price of a 1650 sq-ft, 3 br house (using normal equations): \n',
+       price)
