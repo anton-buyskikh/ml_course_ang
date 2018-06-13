@@ -70,7 +70,8 @@ def normalizeFeatures(X,**kwargs):
         
     return np.divide((X-mean),std),mean,std
 
-#%% load ex1data1.txt - linear regression with one parameter
+#%% PART I
+# load ex1data1.txt - linear regression with one parameter
     
 data1=pd.read_csv("data/ex1data1.txt",names=["X","y"])
 x=data1.X.values[:,None]
@@ -122,7 +123,8 @@ ax.set_xlabel(r"$\theta_0$")
 ax.set_ylabel(r"$\theta_1$")
 fig.show()
 
-#%% load dataset2
+#%% PART II
+# load dataset2
  
 data1=pd.read_csv("data/ex1data2.txt",names=["area","nbed","price"])
 y=data1.price.values
