@@ -32,22 +32,6 @@ def plotData(X,y):
 
 
 
-def plotDataNew(data, label_x, label_y, label_pos, label_neg, axes=None):
-    # Get indexes for class 0 and class 1
-    neg = data[:,2] == 0
-    pos = data[:,2] == 1
-    
-    # If no specific axes object has been passed, get the current axes.
-    if axes == None:
-        axes = plt.gca()
-    axes.scatter(data[pos][:,0], data[pos][:,1], marker='+', c='k', s=60, linewidth=2, label=label_pos)
-    axes.scatter(data[neg][:,0], data[neg][:,1], c='y', s=60, label=label_neg)
-    axes.set_xlabel(label_x)
-    axes.set_ylabel(label_y)
-    axes.legend(frameon= True, fancybox = True);
-
-
-
 def h(X,theta):
     # hypothesis function
     # by default we use sigmoid
@@ -59,7 +43,7 @@ def getCostAndGrad(theta,X,y):
     # Returns the cost function and its gradient
     # see Sec. 1.2.2
     m,n=X.shape
-    J=np.mean(-y*np.log(h(X,theta))-(1-y)*(np.log(1-h(X,theta))))
+    J=(-y*np.log(h(X,theta))-(1-y)*(np.log(1-h(X,theta)))).mean()
     grad=(h(X,theta)-y)@X/m
     return (J,grad)
 
@@ -70,53 +54,14 @@ def getCostAndGradReg(theta,X,y,lam_par):
     # see Sec. 2.3
     J,grad=getCostAndGrad(theta,X,y)
     m,n=X.shape
-    J+=lam_par/2*(theta[1:]**2).mean()
+    J+=lam_par*(theta[1:]**2).sum()/2/m
     grad[1:]+=lam_par/m*theta[1:]
     return (J,grad)
 
 
 
-def getCostReg(theta,X,y,lam_par):
-    J,grad=getCostAndGradReg(theta,X,y,lam_par)
-    return J
-
-
-
-def getGradReg(theta,X,y,lam_par):
-    J,grad=getCostAndGradReg(theta,X,y,lam_par)
-    return grad
-
-
-
-def predict(X,theta):
-    return np.where(h(X,theta)>0.5,1,0)
-
-
-
-#def mapFeatureVector(X1,X2):
-#    degree=6
-#    output_feature_vec = np.ones(len(X1))[:,None]
-#    for i in range(1,degree+1):
-#        for j in range(i+1):
-#            new_feature=np.array(X1**(i-j)*X2**j)[:,None]
-#            output_feature_vec = np.hstack((output_feature_vec,new_feature))
-#    return output_feature_vec
-
-
-
-def plotDecisionBoundary(theta,X,y):
-    fig,ax=plotData(X[:,1:],y)
-    u=np.linspace(-1,1.5,50)
-    v=np.linspace(-1,1.5,50)
-    z=np.zeros((len(u),len(v)))
-    for i in range(len(u)):
-        for j in range(len(v)):
-            z[i][j] = np.dot(poly.fit_transform([np.array([u[i],v[j]])]),theta)
-    ax.contour(u,v,z,levels=[0.])
-    return (fig,ax)
-
-
-
+def predict(X,theta,threshold=0.5):
+    return np.where(h(X,theta)>threshold,1,0)
 
 #%% PART I
 # load ex2data1.txt - logical regression with two parameters
@@ -167,50 +112,40 @@ print('For a student with scores (45,85), admission probability is',
       h(np.array([1,45,85]),theta_opt))
 
 # Accuracy on the training set with the optimal parameters
-print('Train Accuracy: ',np.mean(predict(X,theta_opt)==y)*100, '\n')
+print('Train Accuracy: ',np.mean(predict(X,theta_opt,0.5)==y)*100, '\n')
 
 #%% PART II
 # load ex2data2.txt - logical regression with two parameters
     
 data2=pd.read_csv('data/ex2data2.txt',names=['test1','test2','acceptance'])
 y=np.asarray(data2.acceptance)
-X=np.hstack((np.ones_like(y)[:,None],np.asarray(data2[["test1","test2"]])))
+poly=PolynomialFeatures(6)
+X=poly.fit_transform(data2[["test1","test2"]])
+X.shape
 
 #%% visualize data
 
-fig,ax=plotData(X[:,1:],y)
+fig,ax=plotData(X[:,1:3],y)
 ax.legend(['Good','Bad'])
 fig.show()
 
-#%% create polynomial features
-
-poly=PolynomialFeatures(6)
-XX=poly.fit_transform(data2[["test1","test2"]])
-XX.shape
-
 #%% create and test cost and gradient function
 
-theta_init=np.zeros(XX.shape[1])
-cost,grad=getCostAndGradReg(theta_init,XX,y,0.0)
+theta_init=np.zeros(X.shape[1])
+cost,grad=getCostAndGradReg(theta_init,X,y,0.0)
 print('Cost at theta_init=[0 0 0]: \n', cost)
 print('Gradient at theta_init=[0 0 0]: \n',grad, '\n')
 
 #%% solution via the optimization algorithm
 
+# Try 0,1,100
 lam_par=1.0
 
-#res=scipy.optimize.minimize(getCostAndGradReg,\
-#                            theta_init,\
-#                            args=(XX,y,lam_par),\
-#                            method='Newton-CG',\
-#                            jac=True,\
-#                            options={'maxiter':400,'disp':True})
-
-res=scipy.optimize.minimize(getCostReg,\
+res=scipy.optimize.minimize(getCostAndGradReg,\
                             theta_init,\
-                            args=(XX,y,lam_par),\
-                            method=None,\
-                            jac=getGradReg,\
+                            args=(X,y,lam_par),\
+                            method='Newton-CG',\
+                            jac=True,\
                             options={'maxiter':3000,'disp':True})
 
 theta_opt=res.x
@@ -219,13 +154,15 @@ print('Cost at theta_opt: ',res.fun, '\n')
 
 #%% plot the solution from the previous block
 
+# create the mesh grid
 x1_min,x1_max=X[:,1].min(),X[:,1].max(),
 x2_min,x2_max=X[:,2].min(),X[:,2].max(),
-xx1,xx2=np.meshgrid(np.linspace(x1_min,x1_max),np.linspace(x2_min,x2_max))
+xx1,xx2=np.meshgrid(np.linspace(x1_min,x1_max,100),np.linspace(x2_min,x2_max,100))
+
+# solve for every grid point
 sol=h(poly.fit_transform(np.c_[xx1.ravel(),xx2.ravel()]),theta_opt)
 sol=sol.reshape(xx1.shape)
-
-accuracy=100*np.mean(predict(XX,theta_opt)==y)
+accuracy=100*np.mean(predict(X,theta_opt,0.5)==y)
 
 fig,ax=plotData(X[:,1:],y)
 ax.contour(xx1,xx2,sol,[0.5], linewidths=1, colors='g');       
