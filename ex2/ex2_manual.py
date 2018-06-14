@@ -6,7 +6,7 @@ Created on Tue Jun 12 09:34:37 2018
 @author: Anton Buyskikh
 
 @brief: Logistic regression with multiple features.
-...
+Polynomial features. Feature regularization.
 """
 
 #%% libraries
@@ -15,10 +15,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import timeit
-
-#from scipy.optimize import minimize
 import scipy
-
 from sklearn.preprocessing import PolynomialFeatures
 
 #%% functions
