@@ -22,33 +22,23 @@ import scipy
 def h(X,theta):
     # hypothesis function
     # by default we use sigmoid
-    return 1.0/(1.0+np.exp(-X@theta))
+    return 1.0/(1.0+np.exp(-X.dot(theta)))
 
 
 
-def getCostAndGrad(theta,X,y):
-    # Returns the cost function and its gradient
-    # see Sec. 1.2.2
+def getCostReg(theta,X,y,lam_par):
     m,n=X.shape
     J=(-y*np.log(h(X,theta))-(1-y)*(np.log(1-h(X,theta)))).mean()
-    grad=(h(X,theta)-y)@X/m
-    return (J,grad)
-
-
-
-def getCostAndGradReg(theta,X,y,lam_par):
-    # Returns the regularized cost function and its gradient
-    # see Sec. 2.3
-    J,grad=getCostAndGrad(theta,X,y)
-    m,n=X.shape
     J+=lam_par*(theta[1:]**2).sum()/2/m
+    return J
+
+
+
+def getGradReg(theta,X,y,lam_par):
+    m,n=X.shape
+    grad=(h(X,theta)-y).dot(X)/m
     grad[1:]+=lam_par/m*theta[1:]
-    return (J,grad)
-
-
-
-def predict(X,theta,threshold=0.5):
-    return np.where(h(X,theta)>threshold,1,0)
+    return grad
 
 
 
@@ -74,17 +64,13 @@ def oneVsAll(X,y,k_list,lam_par):
     
     for ik in k_list:
         print('target k='+str(k_list[ik]))
-        ytarget=np.array(y==k_list[ik]).astype(int)        
-        theta_init=theta[:,ik]
-
-        res=scipy.optimize.minimize(getCostAndGradReg,\
-                                    theta_init,\
-                                    args=(X,ytarget,lam_par),\
+        res=scipy.optimize.minimize(getCostReg,\
+                                    theta[:,ik],\
+                                    args=(X,(y==k_list[ik])*1,lam_par),\
                                     method='Newton-CG',\
                                     tol=1e-3,\
-                                    jac=True,\
-                                    options={'maxiter':10,'disp':True})
-        
+                                    jac=getGradReg,\
+                                    options={'maxiter':20,'disp':True})        
         theta[:,ik]=res.x
         
     return theta
@@ -92,8 +78,8 @@ def oneVsAll(X,y,k_list,lam_par):
 
 
 def predictOneVsAllAccuracy(theta,X):
-    probs=X@theta
-    predict=np.argmax(probs,axis=1)    
+    probs=h(X,theta)
+    predict=np.argmax(probs,axis=1)
     return predict
 
 #%% PART I
@@ -139,5 +125,10 @@ accuracy=np.mean(y==predictions)*100
 print("Training Accuracy with logit: ",accuracy,"%")
 
 #%% PART II
+
+#%% timeit
+
+timeit.timeit(stmt='h(X,theta_opt)',setup='from __main__ import h,X,theta_opt',\
+                    number=100)
 
 
