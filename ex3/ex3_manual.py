@@ -70,7 +70,7 @@ def oneVsAll(X,y,k_list,lam_par):
                                     method='Newton-CG',\
                                     tol=1e-3,\
                                     jac=getGradReg,\
-                                    options={'maxiter':20,'disp':True})        
+                                    options={'maxiter':10,'disp':True})        
         theta[:,ik]=res.x
         
     return theta
@@ -83,12 +83,9 @@ def predictOneVsAllAccuracy(theta,X):
     return predict
 
 #%% PART I
-# load data and weights from Matlab files
+# load data from Matlab files
 data=scipy.io.loadmat('data/ex3data1.mat')
-weights=scipy.io.loadmat('data/ex3weights.mat')
-
 print('data    keys: ',data.keys())
-print('weights keys: ',weights.keys())
 
 #%% extract data
 
@@ -109,7 +106,7 @@ print('\n')
 
 #%% visualize data
 
-sample=np.random.randint(0,X.shape[0],100)
+sample=np.random.randint(0,X.shape[0],25)
 fig,ax=displayData(X[sample,1:],y[sample])
 fig.show()
 
@@ -118,15 +115,35 @@ fig.show()
 lam_par=1.0
 theta_opt=oneVsAll(X,y,range(10),lam_par)
 
-#%% accuracy
+#%% prediction
 
-predictions=predictOneVsAllAccuracy(theta_opt,X)
-accuracy=np.mean(y==predictions)*100
-print("Training Accuracy with logit: ",accuracy,"%")
+predictions_1vsAll=predictOneVsAllAccuracy(theta_opt,X)
+accuracy_1vsAll=np.mean(y==predictions_1vsAll)*100
+print("Training Accuracy with scheme: ",accuracy_1vsAll,"%\n")
 
 #%% PART II
+# load weights from Matlab files
+
+weights=scipy.io.loadmat('data/ex3weights.mat')
+print('weights keys: ',weights.keys())
+theta1=np.asarray(weights['Theta1'])
+theta2=np.asarray(weights['Theta2'])
+print('Theta1: ',Theta1.shape)
+print('Theta2: ',Theta2.shape)
+
+#%% prediction
+
+a1=X
+a2=h(a1,theta1.T)
+a2=np.hstack((np.ones(a2.shape[0])[:,None],a2))
+a3=h(a2,theta2.T)
+
+predictions_NN=np.mod(np.argmax(a3,axis=1)+1,10)
+accuracy_NN=np.mean(y==predictions_NN)*100
+print("Training Accuracy with Nequral Network: ",accuracy_NN,"%\n")
 
 #%% timeit
+# test of different contraction schemes
 
 timeit.timeit(stmt='h(X,theta_opt)',setup='from __main__ import h,X,theta_opt',\
                     number=100)
