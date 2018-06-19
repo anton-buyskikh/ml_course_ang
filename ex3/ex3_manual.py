@@ -95,13 +95,9 @@ y[y==10]=0
 # Add constant for intercept
 X=np.c_[np.ones((data['X'].shape[0],1)),np.asarray(data['X'])]
 
-theta1,theta2=weights['Theta1'],weights['Theta2']
-
 print('Shapes of variables:')
 print('X: {} (with identity)'.format(X.shape))
 print('y: {}'.format(y.shape))
-print('theta1: {}'.format(theta1.shape))
-print('theta2: {}'.format(theta2.shape))
 print('\n')
 
 #%% visualize data
@@ -128,8 +124,8 @@ weights=scipy.io.loadmat('data/ex3weights.mat')
 print('weights keys: ',weights.keys())
 theta1=np.asarray(weights['Theta1'])
 theta2=np.asarray(weights['Theta2'])
-print('Theta1: ',Theta1.shape)
-print('Theta2: ',Theta2.shape)
+print('Theta1: ',theta1.shape)
+print('Theta2: ',theta2.shape)
 
 #%% prediction
 
