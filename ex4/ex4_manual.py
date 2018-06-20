@@ -124,6 +124,13 @@ X=np.asarray(data['X'])
 theta1=np.asarray(weights['Theta1'])
 theta2=np.asarray(weights['Theta2'])
 
+if theta1.shape[1]-1!=theta2.shape[0]:
+    print('Wrong thetas')
+
+layer0_size=theta1.shape[1]-1
+layer1_size=theta1.shape[0]
+layer2_size=theta2.shape[0]
+
 print('Shapes of variables:')
 print('X: {} (without identity)'.format(X.shape))
 print('y: {}'.format(y.shape))
@@ -138,10 +145,6 @@ fig,ax=displayData(X[sample,:],y[sample])
 fig.show()
 
 #%% test forward propagation via the cost function
-
-layer0_size=400
-layer1_size=25
-layer2_size=10
 
 nn_params=np.append(theta1,theta2).reshape(-1)
 
@@ -160,20 +163,48 @@ np.testing.assert_almost_equal(0.383770,J,decimal=6,\
                                err_msg="Cost function is NOT correct")
 print('Cost function is correct\n')
 
-#%% sanity check
+#%% test the dg function
 
 np.testing.assert_almost_equal(0.25,dg(0.0),decimal=2,err_msg="Sigmoid function is NOT correct")
 print('Sigmoid function is correct\n')
 
-#%% initialize random weights
+#%% test backward propatation: 
 
-eps=0.1
-theta1_init=getRandTheta(layer1_size,layer0_size+1,eps)
-theta2_init=getRandTheta(layer2_size,layer1_size+1,eps)
+# 1. initialize random weights
+theta_eps=1.0
+theta1_init=getRandTheta(layer1_size,layer0_size+1,theta_eps)
+theta2_init=getRandTheta(layer2_size,layer1_size+1,theta_eps)
+nn_params_init=np.append(theta1_init,theta2_init).reshape(-1)
+
+# 2. take a random sample (manual part is very slow)
+sample=np.random.randint(0,X.shape[0],10)
+
+# 3. find its cost and gradient
+lam_par=1.0
+J_init,gradJ_init=getNNCostAndGradReg(nn_params_init,layer0_size,layer1_size,layer2_size,X[sample,:],y[sample],lam_par)
+print('Initial cost: {}\n'.format(J_init))
+
+#%% test backward propatation: manual part
+
+# 4. find the gradient manually
+eps=0.01
+gradJ_check=np.full_like(gradJ_init,np.nan)
+for ith in range(nn_params_init.size):
+    if ith%1000==0:
+        print('Percentage done: '+str(100*(ith+1.)/nn_params_init.size))
+    nn_params_peps=nn_params_init.copy()
+    nn_params_peps[ith]+=eps
+    J_peps,_=getNNCostAndGradReg(nn_params_peps,layer0_size,layer1_size,layer2_size,X[sample,:],y[sample],lam_par)
+    nn_params_meps=nn_params_init.copy()
+    nn_params_meps[ith]-=eps
+    J_meps,_=getNNCostAndGradReg(nn_params_meps,layer0_size,layer1_size,layer2_size,X[sample,:],y[sample],lam_par)
+    
+    gradJ_check[ith]=(J_peps-J_meps)/2/eps
+
+# 5. compare
+print('Max error is '+str(max(abs(gradJ_check-gradJ_init)))+'\n')
 
 #%% optimal solution search
-
-
 
 
 
