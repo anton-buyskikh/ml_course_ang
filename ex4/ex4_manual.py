@@ -19,24 +19,17 @@ import scipy.io
 
 def h(X,theta):
     # hypothesis function
-    # by default we use sigmoid
-    return 1.0/(1.0+np.exp(-X.dot(theta)))
+    return g(X.dot(theta))
 
 
 
-def getCostReg(theta,X,y,lam_par):
-    m,n=X.shape
-    J=(-y*np.log(h(X,theta))-(1-y)*(np.log(1-h(X,theta)))).mean()
-    J+=lam_par*(theta[1:]**2).sum()/2/m
-    return J
+def g(z):
+    return 1.0/(1+np.exp(-z))
 
 
 
-def getGradReg(theta,X,y,lam_par):
-    m,n=X.shape
-    grad=(h(X,theta)-y).dot(X)/m
-    grad[1:]+=lam_par/m*theta[1:]
-    return grad
+def dg(z):
+    return g(z)*(1-g(z))
 
 
 
@@ -57,18 +50,19 @@ def displayData(X,y):
 
 
 
-def getNNCostReg(nn_params,\
-                 layer0_size,\
-                 layer1_size,\
-                 layer2_size,
-                 X,y,lam_par):
-    m=len(y)    # number of samples
-    
+def getNNCostReg(nn_params,layer0_size,layer1_size,layer2_size,X,y,lam_par):
+    """
+    Forward the backward propagation on the neural network of 3 layers
+    with regularization.
+    TO_DO: generalize for any number of layers
+    """
+    # number of samples
+    m=len(y)
     # create a vector for each value of y
     y_mat=np.zeros((m,layer2_size))
     for i in range(m):
         y_mat[i][y[i]]=1
-    # since the matlab version of thetas start enumiration from 1, not 0
+    # since the matlab version of thetas start enumiration from 1, not from 0
     y_mat=np.roll(y_mat,-1,axis=1)
         
     # Reshape nn_params back into neural network
@@ -76,16 +70,36 @@ def getNNCostReg(nn_params,\
     theta2=nn_params[ layer1_size*(layer0_size+1):].reshape((layer2_size,layer1_size+1))
  
     # forward propagation
-    a1=np.c_[np.ones((X.shape[0],1)),X]
-    a2=h(a1,theta1.T)
-    a2=np.hstack((np.ones(a2.shape[0])[:,None],a2))
-    a3=h(a2,theta2.T)
+    a1=np.c_[np.ones(( X.shape[0],1)),X ]
+    z2=a1.dot(theta1.T)
+    a2=g(z2)    
+    a2=np.c_[np.ones((a2.shape[0],1)),a2]
+    z3=a2.dot(theta2.T)
+    a3=g(z3)
     
-    # cost function
+    # cost function with regularization
     J=(-y_mat*np.log(a3)-(1-y_mat)*(np.log(1-a3))).sum()/m
     J+=lam_par*((theta1[:,1:]**2).sum()+(theta2[:,1:]**2).sum())/2/m
+    
+    # gradient calculation
+    # backward propagation: deltas
+    d3=a3-y_mat
+    d2=d3.dot(theta2)[:,1:]*dg(z2)
 
-    return J
+    # Deltas
+    D1=d2.T.dot(a1)
+    D2=d3.T.dot(a2)
+    
+    # gradients of each theta with regularization
+    grad1=D1/m
+    grad2=D2/m
+    grad1[:,1:]+=lam_par/m*theta1[:,1:]
+    grad2[:,1:]+=lam_par/m*theta2[:,1:]
+    
+    # reshape for the output
+    grad=np.append(grad1,grad2).reshape(-1)
+
+    return (J,grad)
 
 #%% PART I
 # load data from Matlab files
@@ -110,7 +124,7 @@ print('X: {} (without identity)'.format(X.shape))
 print('y: {}'.format(y.shape))
 print('Theta1: ',theta1.shape)
 print('Theta2: ',theta2.shape)
-print('\n')
+print('')
 
 #%% visualize data
 
@@ -124,28 +138,22 @@ layer0_size=400
 layer1_size=25
 layer2_size=10
 
-nn_params=np.append(theta1.reshape([layer1_size*(layer0_size+1)]),\
-                    theta2.reshape([layer2_size*(layer1_size+1)]))
+nn_params=np.append(theta1,theta2).reshape(-1)
 
 print("Checking the cost function without regularization:")
 lam_par=0.0
-J=getNNCostReg(nn_params,layer0_size,layer1_size,layer2_size,X,y,lam_par)
+J,grad=getNNCostReg(nn_params,layer0_size,layer1_size,layer2_size,X,y,lam_par)
 np.testing.assert_almost_equal(0.287629,J,decimal=6,\
                                err_msg="Cost function is NOT correct")
-print('Cost function is correct')
+print('Cost function is correct\n')
 
 
 print("Checking the cost function with regularization:")
 lam_par=1.0
-J=getNNCostReg(nn_params,layer0_size,layer1_size,layer2_size,X,y,lam_par)
+J,grad=getNNCostReg(nn_params,layer0_size,layer1_size,layer2_size,X,y,lam_par)
 np.testing.assert_almost_equal(0.383770,J,decimal=6,\
                                err_msg="Cost function is NOT correct")
-print('Cost function is correct')
-
-
-
-
-
+print('Cost function is correct\n')
 
 #%%
 
