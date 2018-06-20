@@ -50,7 +50,7 @@ def displayData(X,y):
 
 
 
-def getNNCostReg(nn_params,layer0_size,layer1_size,layer2_size,X,y,lam_par):
+def getNNCostAndGradReg(nn_params,layer0_size,layer1_size,layer2_size,X,y,lam_par):
     """
     Forward the backward propagation on the neural network of 3 layers
     with regularization.
@@ -91,15 +91,20 @@ def getNNCostReg(nn_params,layer0_size,layer1_size,layer2_size,X,y,lam_par):
     D2=d3.T.dot(a2)
     
     # gradients of each theta with regularization
-    grad1=D1/m
-    grad2=D2/m
-    grad1[:,1:]+=lam_par/m*theta1[:,1:]
-    grad2[:,1:]+=lam_par/m*theta2[:,1:]
+    gradJ1=D1/m
+    gradJ2=D2/m
+    gradJ1[:,1:]+=lam_par/m*theta1[:,1:]
+    gradJ2[:,1:]+=lam_par/m*theta2[:,1:]
     
     # reshape for the output
-    grad=np.append(grad1,grad2).reshape(-1)
+    gradJ=np.append(gradJ1,gradJ2).reshape(-1)
 
-    return (J,grad)
+    return (J,gradJ)
+
+
+
+def getRandTheta(size_out,size_in,eps):
+    return np.random.uniform(low=-eps,high=eps,size=(size_out,size_in))
 
 #%% PART I
 # load data from Matlab files
@@ -142,7 +147,7 @@ nn_params=np.append(theta1,theta2).reshape(-1)
 
 print("Checking the cost function without regularization:")
 lam_par=0.0
-J,grad=getNNCostReg(nn_params,layer0_size,layer1_size,layer2_size,X,y,lam_par)
+J,gradJ=getNNCostAndGradReg(nn_params,layer0_size,layer1_size,layer2_size,X,y,lam_par)
 np.testing.assert_almost_equal(0.287629,J,decimal=6,\
                                err_msg="Cost function is NOT correct")
 print('Cost function is correct\n')
@@ -150,19 +155,23 @@ print('Cost function is correct\n')
 
 print("Checking the cost function with regularization:")
 lam_par=1.0
-J,grad=getNNCostReg(nn_params,layer0_size,layer1_size,layer2_size,X,y,lam_par)
+J,gradJ=getNNCostAndGradReg(nn_params,layer0_size,layer1_size,layer2_size,X,y,lam_par)
 np.testing.assert_almost_equal(0.383770,J,decimal=6,\
                                err_msg="Cost function is NOT correct")
 print('Cost function is correct\n')
 
-#%%
+#%% sanity check
 
+np.testing.assert_almost_equal(0.25,dg(0.0),decimal=2,err_msg="Sigmoid function is NOT correct")
+print('Sigmoid function is correct\n')
 
+#%% initialize random weights
 
+eps=0.1
+theta1_init=getRandTheta(layer1_size,layer0_size+1,eps)
+theta2_init=getRandTheta(layer2_size,layer1_size+1,eps)
 
-
-
-
+#%% optimal solution search
 
 
 
