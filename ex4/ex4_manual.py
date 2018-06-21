@@ -168,44 +168,47 @@ print('Cost function is correct\n')
 np.testing.assert_almost_equal(0.25,dg(0.0),decimal=2,err_msg="Sigmoid function is NOT correct")
 print('Sigmoid function is correct\n')
 
-#%% test backward propatation: 
+#%% initialize random weights 
 
-# 1. initialize random weights
 theta_eps=1.0
 theta1_init=getRandTheta(layer1_size,layer0_size+1,theta_eps)
 theta2_init=getRandTheta(layer2_size,layer1_size+1,theta_eps)
 nn_params_init=np.append(theta1_init,theta2_init).reshape(-1)
 
-# 2. take a random sample (manual part is very slow)
+#%% test backward propatation: 
+
+# 1. take a random sample, not too large because the manual part is very slow
 sample=np.random.randint(0,X.shape[0],10)
 
-# 3. find its cost and gradient
+# 2. find its cost and gradient via forward and back propagations
 lam_par=1.0
 J_init,gradJ_init=getNNCostAndGradReg(nn_params_init,layer0_size,layer1_size,layer2_size,X[sample,:],y[sample],lam_par)
 print('Initial cost: {}\n'.format(J_init))
 
-#%% test backward propatation: manual part
-
-# 4. find the gradient manually
-eps=0.01
+# 3. find the gradient manually
+eps=0.01 # step for differentiation of parameters
 gradJ_check=np.full_like(gradJ_init,np.nan)
+print('Comparing gradient from the backwards propagation and the manual one:')
 for ith in range(nn_params_init.size):
     if ith%1000==0:
         print('Percentage done: '+str(100*(ith+1.)/nn_params_init.size))
+    # +eps step
     nn_params_peps=nn_params_init.copy()
     nn_params_peps[ith]+=eps
     J_peps,_=getNNCostAndGradReg(nn_params_peps,layer0_size,layer1_size,layer2_size,X[sample,:],y[sample],lam_par)
+    # -eps step
     nn_params_meps=nn_params_init.copy()
     nn_params_meps[ith]-=eps
     J_meps,_=getNNCostAndGradReg(nn_params_meps,layer0_size,layer1_size,layer2_size,X[sample,:],y[sample],lam_par)
-    
+    # diff
     gradJ_check[ith]=(J_peps-J_meps)/2/eps
 
-# 5. compare
-print('Max error is '+str(max(abs(gradJ_check-gradJ_init)))+'\n')
+# 4. compare
+print('Test is done: max error is '+str(max(abs(gradJ_check-gradJ_init)))+'\n')
+
+# 5. repeat and make sure that the error decreses together with eps
 
 #%% optimal solution search
-
 
 
 
