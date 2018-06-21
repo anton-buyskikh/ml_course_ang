@@ -62,8 +62,6 @@ def getNNCostAndGradReg(nn_params,layer0_size,layer1_size,layer2_size,X,y,lam_pa
     y_mat=np.zeros((m,layer2_size))
     for i in range(m):
         y_mat[i][y[i]]=1
-    # since the matlab version of thetas start enumiration from 1, not from 0
-    y_mat=np.roll(y_mat,-1,axis=1)
         
     # Reshape nn_params back into neural network
     theta1=nn_params[:layer1_size*(layer0_size+1) ].reshape((layer1_size,layer0_size+1))
@@ -106,6 +104,28 @@ def getNNCostAndGradReg(nn_params,layer0_size,layer1_size,layer2_size,X,y,lam_pa
 def getRandTheta(size_out,size_in,eps):
     return np.random.uniform(low=-eps,high=eps,size=(size_out,size_in))
 
+
+
+def predict(theta1,theta2,X):
+    # make sure that X is a 2D array m-by-n
+    if np.ndim(X)==1:
+        a1=X.reshape((1,-1))
+    else:
+        a1=X.copy()
+        
+    # forward propagation
+    a1=np.c_[np.ones((a1.shape[0],1)),a1]
+    z2=a1.dot(theta1.T)
+    a2=g(z2)    
+    a2=np.c_[np.ones((a2.shape[0],1)),a2]
+    z3=a2.dot(theta2.T)
+    a3=g(z3)
+    
+    # determine the highest probability result
+    p=np.argmax(a3,axis=1)
+    
+    return p
+
 #%% PART I
 # load data from Matlab files
 data=scipy.io.loadmat('data/ex4data1.mat')
@@ -115,18 +135,28 @@ print('weights keys: ',weights.keys())
 
 #%% extract data
 
+# vector of output !values!, do not mix up with !indices!
 y=np.asarray(data['y'],dtype='int').ravel()
-y[y==10]=0
+y[y==10]=0 # for some reason they call 0 as 10
 
-# Add constant for intercept
-#X=np.c_[np.ones((data['X'].shape[0],1)),np.asarray(data['X'])]
+# array of pixels: each raw is 20x20=400 pixels
 X=np.asarray(data['X'])
+
+# final weight's output is Fortran/Matlab ordered
 theta1=np.asarray(weights['Theta1'])
 theta2=np.asarray(weights['Theta2'])
+# thata1  input: bias + 400 pixels of the image
+# thata1 output: 25 intermediate nodes
+# thata2  input: bias + 25 intermediate nodes
+# thata2 output: 10 digits ordered this way: 1,2,3,4,5,6,7,8,9,0
 
+# the easiest walkaround is to match indices and values:
+theta2=np.roll(theta2,1,axis=0)
+# so now thata2 output is ordered this way: 0,1,2,3,4,5,6,7,8,9
+
+# extract layers sizes
 if theta1.shape[1]-1!=theta2.shape[0]:
     print('Wrong thetas')
-
 layer0_size=theta1.shape[1]-1
 layer1_size=theta1.shape[0]
 layer2_size=theta2.shape[0]
@@ -182,7 +212,8 @@ sample=np.random.randint(0,X.shape[0],10)
 
 # 2. find its cost and gradient via forward and back propagations
 lam_par=1.0
-J_init,gradJ_init=getNNCostAndGradReg(nn_params_init,layer0_size,layer1_size,layer2_size,X[sample,:],y[sample],lam_par)
+J_init,gradJ_init=getNNCostAndGradReg(nn_params_init,layer0_size,layer1_size,\
+                                      layer2_size,X[sample,:],y[sample],lam_par)
 print('Initial cost: {}\n'.format(J_init))
 
 # 3. find the gradient manually
@@ -195,24 +226,44 @@ for ith in range(nn_params_init.size):
     # +eps step
     nn_params_peps=nn_params_init.copy()
     nn_params_peps[ith]+=eps
-    J_peps,_=getNNCostAndGradReg(nn_params_peps,layer0_size,layer1_size,layer2_size,X[sample,:],y[sample],lam_par)
+    J_peps,_=getNNCostAndGradReg(nn_params_peps,layer0_size,layer1_size,\
+                                 layer2_size,X[sample,:],y[sample],lam_par)
     # -eps step
     nn_params_meps=nn_params_init.copy()
     nn_params_meps[ith]-=eps
-    J_meps,_=getNNCostAndGradReg(nn_params_meps,layer0_size,layer1_size,layer2_size,X[sample,:],y[sample],lam_par)
+    J_meps,_=getNNCostAndGradReg(nn_params_meps,layer0_size,layer1_size,\
+                                 layer2_size,X[sample,:],y[sample],lam_par)
     # diff
     gradJ_check[ith]=(J_peps-J_meps)/2/eps
 
 # 4. compare
 print('Test is done: max error is '+str(max(abs(gradJ_check-gradJ_init)))+'\n')
 
-# 5. repeat and make sure that the error decreses together with eps
+# 5. repeat 3-4 and make sure that the error decreses together with eps
 
-#%% optimal solution search
+#%% optimal solution search starting from the initially random thetas
 
+lam_par=1.0
+res=scipy.optimize.minimize(getNNCostAndGradReg,\
+                            nn_params_init,\
+                            args=(layer0_size,layer1_size,layer2_size,X,y,lam_par),\
+                            method='Newton-CG',\
+                            tol=1e-3,\
+                            jac=True,\
+                            options={'maxiter':10,'disp':True})
+nn_params_opt=res.x
+theta1_opt=nn_params_opt[:layer1_size*(layer0_size+1) ].reshape(\
+                        (layer1_size,layer0_size+1))
+theta2_opt=nn_params_opt[ layer1_size*(layer0_size+1):].reshape(\
+                        (layer2_size,layer1_size+1))
 
+#%% accuracy
 
+p=predict(theta1_opt,theta2_opt,X)
+accuracy=np.mean(y==p)*100
+print("Training Accuracy with neural network: ", accuracy, "%")
 
+#%% Display the hidden layer 
 
 
 
