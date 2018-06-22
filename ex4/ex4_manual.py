@@ -4,7 +4,8 @@
 Created on Sun Jun 17 12:24:54 2018
 
 @author: Anton Buyskikh
-@brief: Neural network backpropagation.
+@brief: Neural network forward and backpropagation. Gradient check.
+Visualization of the neural network.
 """
 
 #%% libraries
@@ -33,17 +34,23 @@ def dg(z):
 
 
 
-def displayData(X,y):
-    n1,n2=5,10
+def displayData(X,y=None):
+    # assume there always will be 5 rows
+    n1=5
+    n2=int(X.shape[0]/n1)
+    # assume each image is square
+    img_size=int(X.shape[1]**0.5)
+    # plotting
     fig,ax=plt.subplots(n1,n2,sharex=True,sharey=True)
     img_num=0
     for i in range(n1):
         for j in range(n2):
             # Convert column vector into 20x20 pixel matrix
             # You have to transpose to display correctly
-            img=X[img_num,:].reshape(20,20).T
+            img=X[img_num,:].reshape(img_size,img_size).T
             ax[i][j].imshow(img,cmap='gray')
-            ax[i][j].set_title(str(y[img_num]))
+            if y is not None:
+                ax[i][j].set_title(str(y[img_num]))
             ax[i][j].axis('off')
             img_num+=1
     return (fig,ax)
@@ -243,27 +250,48 @@ print('Test is done: max error is '+str(max(abs(gradJ_check-gradJ_init)))+'\n')
 
 #%% optimal solution search starting from the initially random thetas
 
+# parameters
 lam_par=1.0
-res=scipy.optimize.minimize(getNNCostAndGradReg,\
-                            nn_params_init,\
-                            args=(layer0_size,layer1_size,layer2_size,X,y,lam_par),\
-                            method='Newton-CG',\
-                            tol=1e-3,\
-                            jac=True,\
-                            options={'maxiter':10,'disp':True})
-nn_params_opt=res.x
-theta1_opt=nn_params_opt[:layer1_size*(layer0_size+1) ].reshape(\
-                        (layer1_size,layer0_size+1))
-theta2_opt=nn_params_opt[ layer1_size*(layer0_size+1):].reshape(\
-                        (layer2_size,layer1_size+1))
+niter=20
+accuracy_vec=np.full(niter,np.nan)
+nn_params_opt=nn_params_init
 
-#%% accuracy
+for ii in range(niter):
+    res=scipy.optimize.minimize(getNNCostAndGradReg,\
+                                nn_params_opt,\
+                                args=(layer0_size,layer1_size,layer2_size,X,y,lam_par),\
+                                method='Newton-CG',\
+                                tol=1e-7,\
+                                jac=True,\
+                                options={'maxiter':1,'disp':True})
+    nn_params_opt=res.x
+    theta1_opt=nn_params_opt[:layer1_size*(layer0_size+1) ].reshape(\
+                            (layer1_size,layer0_size+1))
+    theta2_opt=nn_params_opt[ layer1_size*(layer0_size+1):].reshape(\
+                            (layer2_size,layer1_size+1))
+    
+    # accuracy
+    p=predict(theta1_opt,theta2_opt,X)
+    accuracy=np.mean(y==p)*100
+    print("Training Accuracy with neural network: ", accuracy, "%")
+    accuracy_vec[ii]=accuracy
 
-p=predict(theta1_opt,theta2_opt,X)
-accuracy=np.mean(y==p)*100
-print("Training Accuracy with neural network: ", accuracy, "%")
+#%% Plot accuracy
+    
+fig,ax=plt.subplots()
+ax.plot(range(niter),1-accuracy_vec/100,'kx')
+ax.set_yscale('log')
+ax.set_xlabel('iterations')
+ax.set_ylabel('accuracy error')
+fig.show()
 
-#%% Display the hidden layer 
+#%% Visualize thetas
 
+# first  layer: from 401 -> 25 nodes
+fig,ax=displayData(theta1[:,1:])
+fig.show()
 
+# second layer: from  26 -> 10 nodes
+fig,ax=displayData(theta2[:,1:])
+fig.show()
 
