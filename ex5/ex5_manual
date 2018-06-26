@@ -42,15 +42,48 @@ def getGradReg(theta,X,y,lam_par):
 
 
 
-def trainLinearReg(theta_init,X,y,lam_par):
+def trainLinearReg(theta_init,X,y,lam_par,disp_opt=True):
     res=scipy.optimize.minimize(getCostReg,\
                                 theta_init,\
                                 args=(X,y,lam_par),\
                                 method='Newton-CG',\
                                 tol=1e-5,\
                                 jac=getGradReg,\
-                                options={'maxiter':1000,'disp':True})    
+                                options={'maxiter':1000,'disp':disp_opt})    
     return res
+
+
+
+def learningCurve(X_train,y_train,X_cv,y_cv,lam_par):
+    # total length of the training set
+    m=y_train.size
+    error_train_mean=np.zeros(m)
+    error_train_std =np.zeros(m)
+    error_cv_mean   =np.zeros(m)
+    error_cv_std    =np.zeros(m)
+    
+    # One chooses niter sample sets of the length i and obrain error for
+    # the training set as well as for the cross-validation set.
+    # Then one averages over all iterations.
+    niter=200;
+    
+    for i in range(m):
+        tmp_train=np.zeros(niter)
+        tmp_cv   =np.zeros(niter)
+        
+        for iter in range(niter):
+            sample=np.random.randint(0,m,i+1)
+            theta_init=np.random.uniform(low=-1,high=1,size=X_train.shape[1])
+            res=trainLinearReg(theta_init,X_train[sample,:],y_train[sample],lam_par,disp_opt=False)
+            tmp_train[iter]=getCostReg(res.x,X_train[:i+1,:],y_train[:i+1],0.0)
+            tmp_cv   [iter]=getCostReg(res.x,X_cv           ,y_cv         ,0.0)
+        
+        error_train_mean[i]=tmp_train.mean()
+        error_train_std[i] =tmp_train.std()
+        error_cv_mean[i]   =tmp_cv.mean()
+        error_cv_std[i]    =tmp_cv.std()
+    
+    return (error_train_mean,error_train_std,error_cv_mean,error_cv_std)
 
 #%% PART I
 # load data
@@ -85,12 +118,12 @@ print('y_cv:'   ,y_cv.shape)
 #%% visualize data
 
 fig,ax=plt.subplots()
-ax.plot(X_train[:,1],y_train,'xk')
-ax.plot(X_test[:,1] ,y_test ,'ob')
-ax.plot(X_cv[:,1]   ,y_cv   ,'.r')
+ax.plot(X_train[:,1],y_train,'xk',label='train')
+ax.plot(X_test[:,1] ,y_test ,'ob',label='test')
+ax.plot(X_cv[:,1]   ,y_cv   ,'sr',label='cross-validation')
 ax.set_xlabel('Change in water level (x)')
 ax.set_ylabel('Water flowing out of the dam (y)')
-ax.legend(['train','test','cv']) 
+ax.legend() 
 fig.show()
 
 #%% define initial theta and find its cost function with its gradient
@@ -114,8 +147,9 @@ regr=LinearRegression(fit_intercept=False)
 regr.fit(X_train,y_train)
 print('theta optimal (Scikit-learn): ',regr.coef_)
 print('Cost funstion minimum (Scikit-learn): ',getCostReg(regr.coef_,X_train,y_train,lam_par))
+# one should see the same results
 
-#%% plot the result
+#%% plot the result with only linear features
 
 fig,ax=plt.subplots()
 ax.plot(X_train[:,1],y_train,'xk',label='train')
@@ -124,6 +158,32 @@ ax.set_xlabel('Change in water level (x)')
 ax.set_ylabel('Water flowing out of the dam (y)')
 ax.legend() 
 fig.show()
+
+# this is clearly an underfitting model, hence we should observe an evidence
+# for high bias
+
+#%% investigate bias-variance crosover of the model
+
+error_train_mean,error_train_std,error_cv_mean,error_cv_std=\
+    learningCurve(X_train,y_train,X_cv,y_cv,0.0)
+
+#%% plot the learning curve
+
+fig,ax=plt.subplots()
+ax.errorbar(range(1,len(y_train)+1),error_train_mean,error_train_std,label='Training error')
+ax.errorbar(range(1,len(y_train)+1),error_cv_mean   ,error_cv_std   ,label='Validation error')
+ax.set_title('Learning curve for linear regression')
+ax.set_xlabel('Number of training examples')
+ax.set_ylabel('Error')
+ax.legend()
+ax.set_ylim(ymin=0)
+fig.show()
+
+# As it was expected we see high error as the size of the samles increases.
+# Hence the model has the high bias (underfitting).
+
+#%%
+
 
 
 
