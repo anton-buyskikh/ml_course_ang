@@ -15,7 +15,9 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import timeit
 import scipy.io
+
 from sklearn.preprocessing import PolynomialFeatures
+from sklearn.linear_model import LinearRegression
 
 #%% functions
 
@@ -27,17 +29,28 @@ def h(X,theta):
 
 def getCostReg(theta,X,y,lam_par):
     m,n=X.shape
-    J=(-y*np.log(h(X,theta))-(1-y)*(np.log(1-h(X,theta)))).mean()
-    J+=lam_par*(theta[1:]**2).sum()/2/m
+    J=((h(X,theta)-y)**2).mean()/2+lam_par*(theta[1:]**2).sum()/2/m
     return J
 
 
 
 def getGradReg(theta,X,y,lam_par):
-    m,n=X.shape
-    grad=(h(X,theta)-y).dot(X)/m
-    grad[1:]+=lam_par/m*theta[1:]
-    return grad
+    m=X.shape[0]
+    gradJ=(h(X,theta)-y).dot(X)/m
+    gradJ[1:]+=lam_par/m*theta[1:]
+    return gradJ
+
+
+
+def trainLinearReg(theta_init,X,y,lam_par):
+    res=scipy.optimize.minimize(getCostReg,\
+                                theta_init,\
+                                args=(X,y,lam_par),\
+                                method='Newton-CG',\
+                                tol=1e-5,\
+                                jac=getGradReg,\
+                                options={'maxiter':1000,'disp':True})    
+    return res
 
 #%% PART I
 # load data
@@ -49,11 +62,11 @@ data.keys()
 
 # load data
 X_train=data.get('X')
-y_train=data.get('y')
+y_train=data.get('y').ravel()
 X_test =data.get('Xtest')
-y_test =data.get('ytest')
+y_test =data.get('ytest').ravel()
 X_cv   =data.get('Xval')
-y_cv   =data.get('yval')
+y_cv   =data.get('yval').ravel()
 
 # add polynomial features, default 1
 poly=PolynomialFeatures(1)
@@ -80,7 +93,39 @@ ax.set_ylabel('Water flowing out of the dam (y)')
 ax.legend(['train','test','cv']) 
 fig.show()
 
-#%% polynomilap features
+#%% define initial theta and find its cost function with its gradient
+
+lam_par=0.0
+theta_init=np.ones(X_train.shape[1])
+J=getCostReg(theta_init,X_train,y_train,0.0)
+gradJ=getGradReg(theta_init,X_train,y_train,0.0)
+print('Cost functiona at the initial point: ',J)
+print('Gradient at the initial point: ',gradJ)
+
+#%% find optimal theta using the training set
+
+res=trainLinearReg(theta_init,X_train,y_train,lam_par)
+print('theta optimal (manual): ',res.x)
+print('Cost funstion minimum (manual): ',res.fun)
+
+#%% comparison with LinearRegression in Scikit-learn
+
+regr=LinearRegression(fit_intercept=False)
+regr.fit(X_train,y_train)
+print('theta optimal (Scikit-learn): ',regr.coef_)
+print('Cost funstion minimum (Scikit-learn): ',getCostReg(regr.coef_,X_train,y_train,lam_par))
+
+#%% plot the result
+
+fig,ax=plt.subplots()
+ax.plot(X_train[:,1],y_train,'xk',label='train')
+ax.plot(np.linspace(-50,40),(res.x[0]+(res.x[1]*np.linspace(-50,40))),label='linear fit')
+ax.set_xlabel('Change in water level (x)')
+ax.set_ylabel('Water flowing out of the dam (y)')
+ax.legend() 
+fig.show()
+
+
 
 
 
