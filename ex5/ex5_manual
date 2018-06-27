@@ -54,7 +54,7 @@ def trainLinearReg(theta_init,X,y,lam_par,disp_opt=True):
 
 
 
-def learningCurve(X_train,y_train,X_cv,y_cv,lam_par):
+def learningCurve(X_train,y_train,X_cv,y_cv,lam_par,niter=100):
     # total length of the training set
     m=y_train.size
     error_train_mean=np.zeros(m)
@@ -65,7 +65,6 @@ def learningCurve(X_train,y_train,X_cv,y_cv,lam_par):
     # One chooses niter sample sets of the length i and obrain error for
     # the training set as well as for the cross-validation set.
     # Then one averages over all iterations.
-    niter=200;
     
     for i in range(m):
         tmp_train=np.zeros(niter)
@@ -73,10 +72,10 @@ def learningCurve(X_train,y_train,X_cv,y_cv,lam_par):
         
         for iter in range(niter):
             sample=np.random.randint(0,m,i+1)
-            theta_init=np.random.uniform(low=-1,high=1,size=X_train.shape[1])
+            theta_init=np.random.uniform(low=-0.1,high=0.1,size=X_train.shape[1])
             res=trainLinearReg(theta_init,X_train[sample,:],y_train[sample],lam_par,disp_opt=False)
-            tmp_train[iter]=getCostReg(res.x,X_train[:i+1,:],y_train[:i+1],0.0)
-            tmp_cv   [iter]=getCostReg(res.x,X_cv           ,y_cv         ,0.0)
+            tmp_train[iter]=getCostReg(res.x,X_train[sample,:],y_train[sample],0.0)
+            tmp_cv   [iter]=getCostReg(res.x,X_cv             ,y_cv           ,0.0)
         
         error_train_mean[i]=tmp_train.mean()
         error_train_std[i] =tmp_train.std()
@@ -85,7 +84,22 @@ def learningCurve(X_train,y_train,X_cv,y_cv,lam_par):
     
     return (error_train_mean,error_train_std,error_cv_mean,error_cv_std)
 
-#%% PART I
+
+
+def normalizeFeatures(X,**kwargs):
+    if 'mean' in kwargs:
+        mean=kwargs['mean']
+    else:
+        mean=np.mean(X,axis=0)
+        
+    if 'std' in kwargs:
+        std=kwargs['std']
+    else:
+        std =np.std(X,axis=0)
+        
+    return (np.divide((X-mean),std),mean,std)
+
+#%% PART I: underfitting
 # load data
 
 data=scipy.io.loadmat('data/ex5data1.mat')
@@ -93,19 +107,16 @@ data.keys()
 
 #%% extract data
 
-# load data
-X_train=data.get('X')
+# load y-data
 y_train=data.get('y').ravel()
-X_test =data.get('Xtest')
 y_test =data.get('ytest').ravel()
-X_cv   =data.get('Xval')
 y_cv   =data.get('yval').ravel()
 
-# add polynomial features, default 1
+# load only linear features
 poly=PolynomialFeatures(1)
-X_train=poly.fit_transform(X_train)
-X_test =poly.fit_transform(X_test )
-X_cv   =poly.fit_transform(X_cv   )
+X_train=poly.fit_transform(data.get('X'    ))
+X_test =poly.fit_transform(data.get('Xtest'))
+X_cv   =poly.fit_transform(data.get('Xval' ))
 
 # print shapes
 print('X_train:',X_train.shape)
@@ -165,13 +176,15 @@ fig.show()
 #%% investigate bias-variance crosover of the model
 
 error_train_mean,error_train_std,error_cv_mean,error_cv_std=\
-    learningCurve(X_train,y_train,X_cv,y_cv,0.0)
+    learningCurve(X_train,y_train,X_cv,y_cv,0.0,niter=200)
 
-#%% plot the learning curve
+#%% plot the learning curve for the linaer model
 
 fig,ax=plt.subplots()
-ax.errorbar(range(1,len(y_train)+1),error_train_mean,error_train_std,label='Training error')
-ax.errorbar(range(1,len(y_train)+1),error_cv_mean   ,error_cv_std   ,label='Validation error')
+ax.errorbar(range(1,len(y_train)+1),error_train_mean,error_train_std,\
+            label='Training error',capsize=2)
+ax.errorbar(range(1,len(y_train)+1),error_cv_mean   ,error_cv_std   ,\
+            label='Validation error',capsize=2)
 ax.set_title('Learning curve for linear regression')
 ax.set_xlabel('Number of training examples')
 ax.set_ylabel('Error')
@@ -179,26 +192,49 @@ ax.legend()
 ax.set_ylim(ymin=0)
 fig.show()
 
-# As it was expected we see high error as the size of the samles increases.
+# As it was expected we see a large error as the size of the samles increases.
 # Hence the model has the high bias (underfitting).
 
+#%% PART II: overfitting
+
+# Consider polynomial features
+poly=PolynomialFeatures(8)
+X_train_poly=poly.fit_transform(data.get('X'    ))
+X_test_poly =poly.fit_transform(data.get('Xtest'))
+X_cv_poly   =poly.fit_transform(data.get('Xval' ))
+
+# normalize them
+X_train_poly[:,1:],X_mean,X_std=normalizeFeatures(X_train_poly[:,1:])
+X_test_poly[:,1:],_,_          =normalizeFeatures(X_test_poly[:,1:],mean=X_mean,std=X_std)
+X_cv_poly[:,1:],_,_            =normalizeFeatures(X_cv_poly[:,1:],mean=X_mean,std=X_std)
+
+#%% investigate bias-variance crosover of the model
+
+error_train_poly_mean,error_train_poly_std,error_cv_poly_mean,error_cv_poly_std=\
+    learningCurve(X_train_poly,y_train,X_cv_poly,y_cv,1.0,niter=300)
+
+#%% plot the learning curve for the polynomial model
+
+fig,ax=plt.subplots()
+ax.errorbar(range(1,len(y_train)+1),error_train_poly_mean,\
+            error_train_poly_std,label='Training error',capsize=2)
+ax.errorbar(range(1,len(y_train)+1),error_cv_poly_mean   ,\
+            error_cv_poly_std   ,label='Validation error',capsize=2)
+ax.set_title('Learning curve for the linear regression of poly-'+str(poly.degree)+' features')
+ax.set_xlabel('Number of training examples')
+ax.set_ylabel('Error')
+#ax.set_yscale('log',nonposy='clip')
+ax.legend()
+ax.set_ylim(0,75)
+ax.grid()
+fig.show()
+
+# As it was expected we see a small error of the training set as the size of
+# the samles increases, and the cross-validation error is larger, however
+# it get's smaller with the size of sample
+# Hence the model has the high variance (overfitting).
+
 #%%
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
