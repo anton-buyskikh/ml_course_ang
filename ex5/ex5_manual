@@ -4,8 +4,8 @@
 Created on Fri Jun 22 12:10:34 2018
 
 @author: Anton Buyskikh
-@brief: Regulirized linear regression. Bias vs variance.
-...
+@brief: Regulirized linear regression. High bias vs high variance models.
+Learning curve for models with polynomial features.
 """
 
 #%% libraries
@@ -99,7 +99,7 @@ def normalizeFeatures(X,**kwargs):
         
     return (np.divide((X-mean),std),mean,std)
 
-#%% PART I: underfitting
+#%% PART I: underfitting with a linear features
 # load data
 
 data=scipy.io.loadmat('data/ex5data1.mat')
@@ -195,7 +195,7 @@ fig.show()
 # As it was expected we see a large error as the size of the samles increases.
 # Hence the model has the high bias (underfitting).
 
-#%% PART II: overfitting
+#%% PART II: overfitting with high degree polynomials
 
 # Consider polynomial features
 poly=PolynomialFeatures(8)
@@ -208,10 +208,37 @@ X_train_poly[:,1:],X_mean,X_std=normalizeFeatures(X_train_poly[:,1:])
 X_test_poly[:,1:],_,_          =normalizeFeatures(X_test_poly[:,1:],mean=X_mean,std=X_std)
 X_cv_poly[:,1:],_,_            =normalizeFeatures(X_cv_poly[:,1:],mean=X_mean,std=X_std)
 
+#%% find optimal theta using the training set
+
+# try 1 (just right) and 100 (bad)
+lam_par=1.0
+theta_init=np.random.uniform(low=-0.1,high=0.1,size=X_train_poly.shape[1])
+res=trainLinearReg(theta_init,X_train_poly,y_train,lam_par)
+print('theta optimal (manual): ',res.x)
+print('Cost funstion minimum (manual): ',res.fun)
+
+#%% plot the result with only linear features
+
+x_fit=np.linspace(-70,60).reshape(-1,1)
+X_fit=poly.fit_transform(x_fit)
+X_fit[:,1:],_,_=normalizeFeatures(X_fit[:,1:],mean=X_mean,std=X_std)
+y_fit=X_fit.dot(res.x)
+
+
+fig,ax=plt.subplots()
+ax.plot(X_train[:,1],y_train,'xk',label='train')
+ax.plot(x_fit,y_fit,label='poly-'+str(poly.degree)+' fit')
+ax.set_xlabel('Change in water level (x)')
+ax.set_ylabel('Water flowing out of the dam (y)')
+ax.legend() 
+fig.show()
+
+# this is an overfitting model, all training data points have small errors
+
 #%% investigate bias-variance crosover of the model
 
 error_train_poly_mean,error_train_poly_std,error_cv_poly_mean,error_cv_poly_std=\
-    learningCurve(X_train_poly,y_train,X_cv_poly,y_cv,1.0,niter=300)
+    learningCurve(X_train_poly,y_train,X_cv_poly,y_cv,0.1,niter=100)
 
 #%% plot the learning curve for the polynomial model
 
@@ -225,14 +252,14 @@ ax.set_xlabel('Number of training examples')
 ax.set_ylabel('Error')
 #ax.set_yscale('log',nonposy='clip')
 ax.legend()
-ax.set_ylim(0,75)
 ax.grid()
 fig.show()
 
 # As it was expected we see a small error of the training set as the size of
-# the samles increases, and the cross-validation error is larger, however
-# it get's smaller with the size of sample
-# Hence the model has the high variance (overfitting).
+# the samles increases, and the cross-validation error is significantly larger,
+# (here it's an order of magnitude larger).
+# Hence the model has the high variance (overfitting), however it can be fixed
+# with the regularization parameter
 
 #%%
 
