@@ -5,7 +5,7 @@ Created on Fri Jun 29 10:08:23 2018
 
 @author: Anton Buyskikh
 @brief: Support Vector Machines. Linear and Gaussian kernels.
-...
+Cross-validation of accuracy.
 """
 
 #%% libraries
