@@ -4,7 +4,8 @@
 Created on Sun Jul  1 14:40:43 2018
 
 @author: Anton Buyskikh
-@brief: Spam classification.
+@brief: Spam classification. Regular Expression Engine.
+Natural Language Toolkit.
 ...
 """
 
@@ -15,12 +16,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 import scipy.io
 
-from sklearn.svm import SVC
-from sklearn.metrics import accuracy_score
+import sklearn.svm
+#from sklearn.metrics import accuracy_score
 
 import re 
-import nltk, nltk.stem.porter
-
+import nltk,nltk.stem.porter
 
 #%% functions
 
@@ -106,5 +106,54 @@ test_fv=email2FeatureVector(email_contents,vocab_dict)
 
 print("Length of feature vector is %d" % len(test_fv))
 print("Number of non-zero entries is: %d" % sum(test_fv==1))
+
+#%% Sec. 2.3 svm for spam classification
+# load data
+
+data_train=scipy.io.loadmat('data/spamTrain.mat')
+X_train=data_train.get('X')
+y_train=data_train.get('y').flatten()
+
+data_test=scipy.io.loadmat('data/spamTest.mat')
+X_test=data_test.get('Xtest')
+y_test=data_test.get('ytest').flatten()
+
+print('Total number of training emails = ',len(y_train))
+print('Number of training spam emails = ',np.count_nonzero(y_train))
+print('Number of training nonspam emails = ',np.count_nonzero(1-y_train))
+print()
+
+#%% training SVM
+
+# In order to meet accuracy from the PDF:
+# - training accuracy of about 99.8% 
+# - test accuracy of about 98.5%"
+# we choose C=0.1 and 'linear' kernel
+linear_svm=sklearn.svm.SVC(C=0.1,kernel='linear')
+linear_svm.fit(X_train,y_train)
+
+y_train_pred=linear_svm.predict(X_train)
+train_acc=100.0*(y_train_pred==y_train).mean()
+print('Training accuracy = %0.2f%%' % train_acc)
+
+y_test_pred=linear_svm.predict(X_test)
+test_acc=100.0*(y_test_pred==y_test).mean()
+print('Test set accuracy = %0.2f%%' % test_acc)
+print()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
