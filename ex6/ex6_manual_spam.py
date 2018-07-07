@@ -6,7 +6,6 @@ Created on Sun Jul  1 14:40:43 2018
 @author: Anton Buyskikh
 @brief: Spam classification. Regular Expression Engine.
 Natural Language Toolkit.
-...
 """
 
 
