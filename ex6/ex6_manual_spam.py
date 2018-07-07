@@ -41,16 +41,12 @@ def preProcess(email):
 
 
 
-def getVocabDict(reverse=False):
+def getVocabDict(filename):
     vocab_dict={}
-    with open('data/vocab.txt') as f:
+    with open(filename) as f:
         for line in f:
             (val,key)=line.split()
-            if not reverse:
-                vocab_dict[key]=int(val)
-            else:
-                vocab_dict[int(val)]=key
-                
+            vocab_dict[key]=int(val)
     return vocab_dict
 
 
@@ -100,12 +96,13 @@ def email2FeatureVector(raw_email,vocab_dict):
 
 #%% Sec. 2.1 processing emails
 
-vocab_dict=getVocabDict()
+vocab_dict=getVocabDict('data/vocab.txt')
 email_contents=open('data/emailSample1.txt','r').read()
 test_fv=email2FeatureVector(email_contents,vocab_dict)
 
 print("Length of feature vector is %d" % len(test_fv))
 print("Number of non-zero entries is: %d" % sum(test_fv==1))
+print()
 
 #%% Sec. 2.3 svm for spam classification
 # load data
@@ -129,23 +126,38 @@ print()
 # - training accuracy of about 99.8% 
 # - test accuracy of about 98.5%"
 # we choose C=0.1 and 'linear' kernel
-linear_svm=sklearn.svm.SVC(C=0.1,kernel='linear')
-linear_svm.fit(X_train,y_train)
+svm=sklearn.svm.SVC(C=0.1,kernel='linear')
+svm.fit(X_train,y_train)
 
-y_train_pred=linear_svm.predict(X_train)
+y_train_pred=svm.predict(X_train)
 train_acc=100.0*(y_train_pred==y_train).mean()
 print('Training accuracy = %0.2f%%' % train_acc)
 
-y_test_pred=linear_svm.predict(X_test)
+y_test_pred=svm.predict(X_test)
 test_acc=100.0*(y_test_pred==y_test).mean()
 print('Test set accuracy = %0.2f%%' % test_acc)
 print()
 
+#%% Find words which are more/less likely to be an identificator of spam
 
+# create an inversed dictionary
+vocab_dict_inv={v:k for k,v in vocab_dict.items()}
 
+# sort indicies from the most important to least important
+sorted_indices=np.argsort(svm.coef_,axis=None )[::-1]
 
+fig,ax=plt.subplots()
+ax.plot(svm.coef_[:,sorted_indices].reshape(-1),'.')
+ax.set_xlabel('sorted indices')
+ax.set_ylabel('SVM coefficients')
+plt.show()
 
-
+print("The 15 most  important words to classify a spam e-mail are:")
+print([vocab_dict_inv[x] for x in sorted_indices[:15 ]])
+print()
+print("The 15 least important words to classify a spam e-mail are:")
+print([vocab_dict_inv[x] for x in sorted_indices[-15:]])
+print()
 
 
 
