@@ -116,7 +116,7 @@ X_test=data_test.get('Xtest')
 y_test=data_test.get('ytest').flatten()
 
 print('Total number of training emails = ',len(y_train))
-print('Number of training spam emails = ',np.count_nonzero(y_train))
+print('Number of training    spam emails = ',np.count_nonzero(  y_train))
 print('Number of training nonspam emails = ',np.count_nonzero(1-y_train))
 print()
 
@@ -159,8 +159,19 @@ print("The 15 least important words to classify a spam e-mail are:")
 print([vocab_dict_inv[x] for x in sorted_indices[-15:]])
 print()
 
+#%% Try test emails with already trained 
 
+# just change the file name and test the algorithm
+email_contents=open('data/spamSample2.txt','r').read()
+X_sample=email2FeatureVector(email_contents,vocab_dict).reshape(1,-1)
 
+print('###### Email: ###################')
+print(email_contents)
+print('#################################')
+print('Length of feature vector is %d' % X_sample.size)
+print('Number of non-zero entries is: %d' % sum(sum(X_sample==1)))
+print(svm.predict(X_sample))
+print()
 
 
 
