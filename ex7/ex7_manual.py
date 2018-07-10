@@ -13,6 +13,7 @@ K-means clustering.
 
 import numpy as np
 import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
 import scipy.io
 import random
 
@@ -51,7 +52,8 @@ def runKMeans(X,centroids,max_iters,isHistory=False):
         centroids=computeCentroids(X,indc,K)
         if isHistory:
             history[:,:,iter]=centroids
-
+    indc=findClosestCentroids(X,centroids)
+    
     if isHistory:
         return (centroids,indc,history)
     else:
@@ -83,6 +85,8 @@ centroids=X[sample,:]
 max_iters=10
 centroids,indc,history=runKMeans(X,centroids,max_iters,isHistory=True)
 
+# NOTE: it would be good to normalize data as well
+
 #%% display the result
 
 fig,ax=plt.subplots()
@@ -95,9 +99,37 @@ ax.set_xlabel('x1')
 ax.set_ylabel('x2')
 fig.show()
 
+#%%  Data compression
+# load an image
 
+image=plt.imread("data/bird_small.png")
+plt.imshow(image)
+plt.show()
 
+#%%
 
+# Reshape image to get R, G, B values for each pixel
+X=image.reshape((-1,image.shape[2]))
+K=16 # # of cluster == # of colors
+max_iters=30
+
+# pick random centroids
+sample=random.sample(range(m),K)
+centroids=X[sample,:]
+
+# run clustering
+centroids,indc,history=runKMeans(X,centroids,max_iters,isHistory=True)
+
+# Image Compression
+X_recovered=centroids[indc.astype('int'),:]
+X_recovered=X_recovered.reshape(image.shape)
+
+#%% Display the original and compressed images together
+
+fig,(ax1,ax2)=plt.subplots(1,2)
+ax1.imshow(image)
+ax2.imshow(X_recovered)
+fig.show()
 
 
 
