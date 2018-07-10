@@ -100,20 +100,20 @@ ax.set_ylabel('x2')
 fig.show()
 
 #%%  Data compression
-# load an image
+# load the image
 
 image=plt.imread("data/bird_small.png")
 plt.imshow(image)
 plt.show()
 
-#%%
+#%% Run the image compression algorithm using K-means
 
 # Reshape image to get R, G, B values for each pixel
 X=image.reshape((-1,image.shape[2]))
-K=16 # # of cluster == # of colors
+K=16 # number of cluster == number of colours
 max_iters=30
 
-# pick random centroids
+# pick random initial centroids
 sample=random.sample(range(m),K)
 centroids=X[sample,:]
 
@@ -122,13 +122,15 @@ centroids,indc,history=runKMeans(X,centroids,max_iters,isHistory=True)
 
 # Image Compression
 X_recovered=centroids[indc.astype('int'),:]
-X_recovered=X_recovered.reshape(image.shape)
+image_recovered=X_recovered.reshape(image.shape)
 
 #%% Display the original and compressed images together
 
 fig,(ax1,ax2)=plt.subplots(1,2)
 ax1.imshow(image)
-ax2.imshow(X_recovered)
+ax2.imshow(image_recovered)
+ax1.set_title('Original')
+ax2.set_title('Compressed')
 fig.show()
 
 #%% Visualize all pixels of the image on the RGB scale
@@ -136,10 +138,11 @@ fig.show()
 fig=plt.figure()
 ax=fig.add_subplot(111,projection='3d')
 for k in range(K):
-    ax.scatter(X[indc==k,0],X[indc==k,1],X[indc==k,2],marker='.',alpha=0.2)
+    ax.scatter(X[indc==k,0],X[indc==k,1],X[indc==k,2],\
+               marker='.',alpha=0.4,c=centroids[k,:])
     ax.plot(history[k,0,:],history[k,1,:],history[k,2,:],':k')    
-ax.scatter(centroids[:,0],centroids[:,1],centroids[:,2],c='k',marker='o',\
-           label='final centroids')
+ax.scatter(centroids[:,0],centroids[:,1],centroids[:,2],\
+           c='k',marker='o',label='final centroids')
 ax.legend(loc='best')
 ax.set_xlabel('Red')
 ax.set_ylabel('Green')
