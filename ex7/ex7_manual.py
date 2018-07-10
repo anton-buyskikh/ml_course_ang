@@ -131,7 +131,20 @@ ax1.imshow(image)
 ax2.imshow(X_recovered)
 fig.show()
 
+#%% Visualize all pixels of the image on the RGB scale
 
+fig=plt.figure()
+ax=fig.add_subplot(111,projection='3d')
+for k in range(K):
+    ax.scatter(X[indc==k,0],X[indc==k,1],X[indc==k,2],marker='.',alpha=0.2)
+    ax.plot(history[k,0,:],history[k,1,:],history[k,2,:],':k')    
+ax.scatter(centroids[:,0],centroids[:,1],centroids[:,2],c='k',marker='o',\
+           label='final centroids')
+ax.legend(loc='best')
+ax.set_xlabel('Red')
+ax.set_ylabel('Green')
+ax.set_zlabel('Blue')
+fig.show()
 
 
 
