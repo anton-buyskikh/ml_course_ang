@@ -14,6 +14,7 @@ K-means clustering.
 import numpy as np
 import matplotlib.pyplot as plt
 import scipy.io
+import random
 
 #%% functions
 
@@ -34,6 +35,28 @@ def computeCentroids(X,indc,K):
         centroids[k]=np.mean(X[indc==k,:],axis=0)
     return centroids
 
+
+
+def runKMeans(X,centroids,max_iters,isHistory=False):
+    m,n=X.shape
+    K=centroids.shape[0]
+
+    # save the history of iterations
+    if isHistory:
+        history=np.full((K,n,max_iters),np.nan)
+        history[:,:,0]=centroids
+
+    for iter in range(max_iters):
+        indc=findClosestCentroids(X,centroids)
+        centroids=computeCentroids(X,indc,K)
+        if isHistory:
+            history[:,:,iter]=centroids
+
+    if isHistory:
+        return (centroids,indc,history)
+    else:
+        return (centroids,indc)
+
 #%% PART I: 
 # get data
 
@@ -49,8 +72,28 @@ K=centroids.shape[0]  # number of centroids
 indc=findClosestCentroids(X,centroids)
 centroids=computeCentroids(X,indc,K)
 
+#%% K-means Clustering
 
+# pick random data points as K centroids
+K=3
+sample=random.sample(range(m),K)
+centroids=X[sample,:]
 
+# run the search
+max_iters=10
+centroids,indc,history=runKMeans(X,centroids,max_iters,isHistory=True)
+
+#%% display the result
+
+fig,ax=plt.subplots()
+for k in range(K):
+    ax.plot(X[indc==k,0],X[indc==k,1],'.',label='final cluster '+str(k))
+    ax.plot(history[k,0,:],history[k,1,:],':xk')    
+ax.plot(centroids[:,0],centroids[:,1],'ok',label='final centroids')
+ax.legend(loc='best')
+ax.set_xlabel('x1')
+ax.set_ylabel('x2')
+fig.show()
 
 
 
