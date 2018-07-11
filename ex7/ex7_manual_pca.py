@@ -30,6 +30,11 @@ def normalizeFeatures(X,**kwargs):
 
 
 
+def unnormalizeFeatures(X,mean,std):
+    return np.multiply(X,std)+mean
+
+
+
 def pca(X):
 	covar=np.dot(X.T,X)/X.shape[0]
 	U,S,V=np.linalg.svd(covar)
@@ -50,7 +55,7 @@ def recoverData(Z,U,K):
 			X_rec[i,j]=recovered_j
 	return X_rec
 
-#%% get data
+#%% get data1 --- simple dimension reduction
 
 data1=scipy.io.loadmat("data/ex7data1.mat")
 X=data1.get("X")
@@ -65,17 +70,37 @@ U,S,V=pca(X_norm)
 
 #%% recover the data
 
-K=1
+K=1 # number of principal axes
 Z=projectData(X_norm,U,K)
-X_rec=recoverData(Z,U,K)
+X_norm_rec=recoverData(Z,U,K)
+X_rec=unnormalizeFeatures(X_norm_rec,mu,sigma)
 
-#%% plot 
+#%% plot on original scales
 
-plt.cla()
-plt.plot(X_norm[:,0], X_norm[:,1],'bo',label='original')
-plt.plot(X_rec[:,0], X_rec[:,1], 'rx',label='reduced')
-plt.legend()
-plt.show()
+fig,ax=plt.subplots()
+for i in range(X.shape[0]):
+    ax.plot([X[i,0],X_rec[i,0]],[X[i,1],X_rec[i,1]],':k')
+ax.plot(X[:,0],     X[:,1]    ,'b.',label='original')
+ax.plot(X_rec[:,0], X_rec[:,1],'r.',label='reduced')
+ax.legend()
+ax.axis([1,7,2,8])
+ax.set_aspect('equal')
+fig.show()
+
+# NOTE: Since sigmas are slightly different, it's not exacly a 90degree
+#       projection. However in the normalized units it is (see below)
+
+#%% plot on normalized scales
+
+fig,ax=plt.subplots()
+for i in range(X.shape[0]):
+    ax.plot([X_norm[i,0],X_norm_rec[i,0]],[X_norm[i,1],X_norm_rec[i,1]],':k')
+ax.plot(X_norm[:,0],     X_norm[:,1]    ,'b.',label='original')
+ax.plot(X_norm_rec[:,0], X_norm_rec[:,1],'r.',label='reduced')
+ax.legend()
+ax.axis([-3,3,-3,3])
+ax.set_aspect('equal')
+fig.show()
 
 
 
