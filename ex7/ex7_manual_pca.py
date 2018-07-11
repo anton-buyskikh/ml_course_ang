@@ -49,12 +49,8 @@ def projectData(X,U,K):
 
 
 def recoverData(Z,U,K):
-	X_rec=np.zeros((Z.shape[0],U.shape[1]))
-	for i in range(Z.shape[0]):
-		for j in range(U.shape[1]):
-			recovered_j=np.dot(Z[i,:].T,U[j,:K])
-			X_rec[i,j]=recovered_j
-	return X_rec
+    X_rec=Z[:,:K].dot(U[:,:K].T)
+    return X_rec
 
 
 
@@ -148,7 +144,7 @@ face_grid.show()
 
 #%% recover data
 
-K=10 # number of principal axes
+K=100 # number of principal axes
 Z=projectData(X_norm,U,K)
 X_norm_rec=recoverData(Z,U,K)
 X_rec=unnormalizeFeatures(X_norm_rec,mu,sigma)
