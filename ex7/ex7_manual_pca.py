@@ -12,6 +12,7 @@ Principal Component Analysis. Dimensionality reduction.
 import numpy as np
 import matplotlib.pyplot as plt
 import scipy.io
+import random
 
 #%% functions
 
@@ -55,6 +56,28 @@ def recoverData(Z,U,K):
 			X_rec[i,j]=recovered_j
 	return X_rec
 
+
+
+def displayData(X):
+    m,n=X.shape
+    # define the grid with images
+    rows=int(m**0.5)
+    cols=int(m**0.5)
+    # define the size of images
+    sz1=int(n**0.5)
+    sz2=int(n**0.5)
+    
+    # plot
+    fig,ax=plt.subplots(rows,cols,sharex=True,sharey=True)
+    img_num=0
+    for i in range(rows):
+        for j in range(cols):
+            img=X[img_num,:].reshape(sz1,sz2).T
+            ax[i,j].imshow(img,cmap='gray')
+            img_num+=1
+
+    return (fig,ax)
+
 #%% get data1 --- simple dimension reduction
 
 data1=scipy.io.loadmat("data/ex7data1.mat")
@@ -63,12 +86,12 @@ plt.cla()
 plt.plot(X[:,0],X[:,1],'bo')
 plt.show()
 
-#%% normalize and compress data with PCA
+#%% normalize and factorize data with PCA
 
 X_norm,mu,sigma=normalizeFeatures(X)
 U,S,V=pca(X_norm)
 
-#%% recover the data
+#%% recover data
 
 K=1 # number of principal axes
 Z=projectData(X_norm,U,K)
@@ -83,6 +106,7 @@ for i in range(X.shape[0]):
 ax.plot(X[:,0],     X[:,1]    ,'b.',label='original')
 ax.plot(X_rec[:,0], X_rec[:,1],'r.',label='reduced')
 ax.legend()
+ax.set_title('Origianl axes')
 ax.axis([1,7,2,8])
 ax.set_aspect('equal')
 fig.show()
@@ -98,19 +122,45 @@ for i in range(X.shape[0]):
 ax.plot(X_norm[:,0],     X_norm[:,1]    ,'b.',label='original')
 ax.plot(X_norm_rec[:,0], X_norm_rec[:,1],'r.',label='reduced')
 ax.legend()
+ax.set_title('Normalized axes')
 ax.axis([-3,3,-3,3])
 ax.set_aspect('equal')
 fig.show()
 
+#%% get data with faces and plot a random sample
 
+data2=scipy.io.loadmat("data/ex7faces.mat")
+X=data2.get("X")
 
+sample=random.sample(range(X.shape[0]),25)
+face_grid,ax=displayData(X[sample,:])
+face_grid.show()
 
+#%% normalize and factorize data with PCA
 
+X_norm,mu,sigma=normalizeFeatures(X)
+U,S,V=pca(X_norm)
 
+#%% display the largest principal components --- eigenfaces? :)
 
+face_grid,ax=displayData(U[:,:36].T)
+face_grid.show()
 
+#%% recover data
 
+K=10 # number of principal axes
+Z=projectData(X_norm,U,K)
+X_norm_rec=recoverData(Z,U,K)
+X_rec=unnormalizeFeatures(X_norm_rec,mu,sigma)
 
+#%% plot original and recovered images together
+
+sample=random.sample(range(X.shape[0]),25)
+face_grid,ax=displayData(X[sample,:])
+face_grid.show()
+
+face_grid,ax=displayData(X_rec[sample,:])
+face_grid.show()
 
 
 
