@@ -37,9 +37,8 @@ def multivariateGaussian(X,mu,sigma2):
         sigma2=np.diagflat(sigma2)
     # calculate p-values
     XSigX=np.sum(np.dot(Xmu,np.linalg.inv(sigma2))*Xmu,1)
-    p=np.exp(-0.5*XSigX)*((2*np.pi)**n * np.linalg.det(sigma2))**(-0.5)
+    p=np.exp(-0.5*XSigX) * (2*np.pi)**(-n/2) * np.linalg.det(sigma2)**(-0.5)
     return p
-
 
 
 
@@ -60,6 +59,31 @@ def visualizeFit(X,mu,sigma2):
 
     return (fig,ax)
 
+
+
+def selectThreshold(y_cv,p_cv):
+    # initial values
+    bestEpsilon=0
+    bestF1=-666
+    stepsize=(p_cv.max()-p_cv.min())/1000
+    evals=np.arange(p_cv.min(),p_cv.max(),stepsize)
+    
+    for epsilon in evals:
+        predictions=(p_cv<epsilon)
+        tp=np.sum( predictions &  y_cv)
+        fp=np.sum( predictions & ~y_cv)
+        fn=np.sum(~predictions &  y_cv)
+        if (tp+fp==0) or (tp+fn==0):
+            continue
+        prec=1.0*tp/(tp+fp)
+        rec =1.0*tp/(tp+fn)
+        F1=2*prec*rec/(prec+rec)
+        if F1>bestF1:
+            bestF1=F1
+            bestEpsilon=epsilon
+    
+    return (bestEpsilon,bestF1)
+
 #%% load data
 
 data=scipy.io.loadmat('data/ex8data1.mat')
@@ -67,14 +91,14 @@ data.keys()
 
 X=data.get('X')
 X_cv=data.get('Xval')
-y_cv   =data.get('yval').ravel()
+y_cv=data.get('yval').ravel().astype('bool')
 
 # print shapes
 print('X:   ',X.shape)
 print('X_cv:',X_cv.shape)
 print('y_cv:',y_cv.shape)
 
-#%% plot X
+#%% plot data
 
 plt.plot(X[:,0],X[:,1],'bx')
 plt.xlabel('Latency (ms)')
@@ -83,19 +107,30 @@ plt.show()
 
 #%% apply gaussian fitting
 
+# choose one or the other
 mu,sigma2=estimateGaussian(X)
 #mu,sigma2=estimateMultivariateGaussian(X)
 
-# test run
+# evaluate probability of each data point
 p=multivariateGaussian(X,mu,sigma2)
 
-#%% plot
+#%% plot the Gaussian distribution
 
 fig,ax=visualizeFit(X,mu,sigma2)
 fig.show()
 
+#%% find an appropriate threshold via F1-score
 
+p_cv=multivariateGaussian(X_cv,mu,sigma2)
+epsilon,F1=selectThreshold(y_cv,p_cv)
 
+#%% visualize the anomalies
+
+fig,ax=visualizeFit(X,mu,sigma2)
+indOfAnom=np.where(p<epsilon)
+plt.plot(X[indOfAnom,0],X[indOfAnom,1],'rs',label='anomalies')
+fig.legend()
+fig.show()
 
 
 
