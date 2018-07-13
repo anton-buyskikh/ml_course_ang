@@ -21,15 +21,22 @@ def estimateGaussian(X):
 
 
 
+def estimateMultivariateGaussian(X):
+    mu=np.mean(X,axis=0)
+    Xmu=X-mu
+    sigma2=Xmu.T.dot(Xmu)/X.shape[0]
+    return (mu,sigma2)
+
+
 
 def multivariateGaussian(X,mu,sigma2):
     n=X.shape[1] # dimensionality of the problem
-    X=X-mu
+    Xmu=X-mu
     # check if sigma2 is a 2D array or 1D vector
     if sigma2.ndim==1:
         sigma2=np.diagflat(sigma2)
     # calculate p-values
-    XSigX=np.sum(np.dot(X,np.linalg.inv(sigma2))*X,1)
+    XSigX=np.sum(np.dot(Xmu,np.linalg.inv(sigma2))*Xmu,1)
     p=np.exp(-0.5*XSigX)*((2*np.pi)**n * np.linalg.det(sigma2))**(-0.5)
     return p
 
@@ -44,8 +51,8 @@ def visualizeFit(X,mu,sigma2):
     Z=multivariateGaussian(Z,mu,sigma2).reshape(np.shape(X1))
 
     # create contour-levels
-    mylevels=np.array([10.0**i for i in np.arange(-20,0,3)])
-	
+    mylevels=10.0**np.arange(-20,0,2)	    
+    
     # plot
     fig,ax=plt.subplots()
     ax.plot(X[:,0],X[:,1],'bx')
@@ -69,7 +76,7 @@ print('y_cv:',y_cv.shape)
 
 #%% plot X
 
-plt.plot(X[:,0], X[:,1],'bx')
+plt.plot(X[:,0],X[:,1],'bx')
 plt.xlabel('Latency (ms)')
 plt.ylabel('Throughput (mb/s)');
 plt.show()
@@ -77,9 +84,10 @@ plt.show()
 #%% apply gaussian fitting
 
 mu,sigma2=estimateGaussian(X)
+#mu,sigma2=estimateMultivariateGaussian(X)
 
 # test run
-p=multivariateGaussian(X, mu, sigma2)
+p=multivariateGaussian(X,mu,sigma2)
 
 #%% plot
 
