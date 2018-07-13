@@ -127,10 +127,45 @@ epsilon,F1=selectThreshold(y_cv,p_cv)
 #%% visualize the anomalies
 
 fig,ax=visualizeFit(X,mu,sigma2)
-indOfAnom=np.where(p<epsilon)
-plt.plot(X[indOfAnom,0],X[indOfAnom,1],'rs',label='anomalies')
-fig.legend()
+indOfAnom   =np.where(p   <epsilon)
+indOfAnom_cv=np.where(p_cv<epsilon)
+plt.plot(X[indOfAnom[0],0],X[indOfAnom[0],1],'rs',label='anomalies')
+ax.legend()
+ax.set_title('Main set')
 fig.show()
+
+print('Found '+str(indOfAnom[0].size)   +' anomalies in the main set and')
+print('      '+str(indOfAnom_cv[0].size)+' anomalies in the CV set')
+
+#%% run the same algorithm for a multi-dimensional case
+
+data=scipy.io.loadmat('data/ex8data2.mat')
+data.keys()
+
+X=data.get('X')
+X_cv=data.get('Xval')
+y_cv=data.get('yval').ravel().astype('bool')
+
+# print shapes
+print('X:   ',X.shape)
+print('X_cv:',X_cv.shape)
+print('y_cv:',y_cv.shape)
+
+# choose one or the other
+mu,sigma2=estimateGaussian(X)
+#mu,sigma2=estimateMultivariateGaussian(X)
+p=multivariateGaussian(X,mu,sigma2)
+p_cv=multivariateGaussian(X_cv,mu,sigma2)
+epsilon,F1=selectThreshold(y_cv,p_cv)
+
+indOfAnom   =np.where(p   <epsilon)
+indOfAnom_cv=np.where(p_cv<epsilon)
+print('Found '+str(indOfAnom[0].size)   +' anomalies in the main set and')
+print('      '+str(indOfAnom_cv[0].size)+' anomalies in the CV set')
+
+
+
+
 
 
 
