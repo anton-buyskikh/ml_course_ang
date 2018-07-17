@@ -4,8 +4,8 @@
 Created on Fri Jul 13 09:48:35 2018
 
 @author: Anton Buyskikh
-@brief: 
-...
+@brief: Anomaly detection. Multivariate Gaussian distribution.
+Precision. Recall. F1-score.
 """
 #%% libraries
 
@@ -108,8 +108,10 @@ plt.show()
 #%% apply gaussian fitting
 
 # choose one or the other
-mu,sigma2=estimateGaussian(X)
-#mu,sigma2=estimateMultivariateGaussian(X)
+if True:
+    mu,sigma2=estimateGaussian(X)
+else:
+    mu,sigma2=estimateMultivariateGaussian(X)
 
 # evaluate probability of each data point
 p=multivariateGaussian(X,mu,sigma2)
@@ -150,10 +152,13 @@ y_cv=data.get('yval').ravel().astype('bool')
 print('X:   ',X.shape)
 print('X_cv:',X_cv.shape)
 print('y_cv:',y_cv.shape)
+print()
 
 # choose one or the other
-mu,sigma2=estimateGaussian(X)
-#mu,sigma2=estimateMultivariateGaussian(X)
+if True:
+    mu,sigma2=estimateGaussian(X)
+else:
+    mu,sigma2=estimateMultivariateGaussian(X)
 p=multivariateGaussian(X,mu,sigma2)
 p_cv=multivariateGaussian(X_cv,mu,sigma2)
 epsilon,F1=selectThreshold(y_cv,p_cv)
