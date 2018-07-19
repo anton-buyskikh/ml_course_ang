@@ -4,14 +4,14 @@
 Created on Tue Jul 17 10:32:59 2018
 
 @author: Anton Buyskikh
-@brief: Recommender Systems.
-...
+@brief: Recommender Systems. Collaborative filtering.
 """
 #%% libraries
 
 import numpy as np
 import matplotlib.pyplot as plt
 import scipy.io
+import pandas as pd
 import random
 
 #%% functions
@@ -34,6 +34,7 @@ def reshapeParams(XTheta,nm,nu,nf):
 def cofiCostFunc(pars,Y,R,nu,nm,nf,lam_par=0.0):
     X,Theta=reshapeParams(pars,nm,nu,nf)
     # const fuction
+    # NB: only sum elements that have R==1
     cost=0.5*np.sum((X.dot(Theta.T)*R-Y)**2)
     # regularization
     cost+=(lam_par/2.)*np.sum(pars**2)    
@@ -43,6 +44,7 @@ def cofiCostFunc(pars,Y,R,nu,nm,nf,lam_par=0.0):
 
 def cofiGrad(pars,Y,R,nu,nm,nf,lam_par=0.0):
     X,Theta=reshapeParams(pars,nm,nu,nf)
+    # NB: only sum elements that have R==1
     tmp=X.dot(Theta.T)*R-Y
     # gradient
     gradX=tmp.dot(Theta)
@@ -69,6 +71,14 @@ def checkGradient(pars,Y,R,nu,nm,nf,lam_par=0.0):
         epsvec[idx]=0
         print('%+0.15f \t %+0.15f \t %+0.15f'\
               %(grad_num,grads[idx],grad_num-grads[idx]))
+
+
+
+def normalizeRatings(Y,R):
+    # The mean is only counting movies that were rated
+    Ymean=np.sum(Y,axis=1)/np.sum(R,axis=1)
+    Ymean=Ymean.reshape((-1,1))
+    return (Y-Ymean,Ymean)
 
 #%% get data
 
@@ -108,24 +118,24 @@ nu=data2.get('num_users'   )[0,0]
 nm=data2.get('num_movies'  )[0,0]
 nf=data2.get('num_features')[0,0]
 
-## For now, reduce the data set size so that this runs faster
-nu=4
-nm=5
-nf=3
-X=X[:nm,:nf]
-Theta=Theta[:nu,:nf]
-Y=Y[:nm,:nu]
-R=R[:nm,:nu]
-
 #%% sanity check for the cost function
+
+## For now, reduce the data set size so that this runs faster
+nu1=4
+nm1=5
+nf1=3
+X1=X[:nm1,:nf1]
+Theta1=Theta[:nu1,:nf1]
+Y1=Y[:nm1,:nu1]
+R1=R[:nm1,:nu1]
 
 # "...run your cost function. You should expect to see an output of 22.22."
 print('Cost with nu=4, nm=5, nf=3 is %0.2f.'\
-      %cofiCostFunc(flattenParams(X,Theta),Y,R,nu,nm,nf))
+      %cofiCostFunc(flattenParams(X1,Theta1),Y1,R1,nu1,nm1,nf1))
     
 # "...with lambda=1.5 you should expect to see an output of 31.34."
 print('Cost with nu=4, nm=5, nf=3 (and lambda=1.5) is %0.2f.'\
-      %cofiCostFunc(flattenParams(X,Theta),Y,R,nu,nm,nf,lam_par=1.5))
+      %cofiCostFunc(flattenParams(X1,Theta1),Y1,R1,nu1,nm1,nf1,lam_par=1.5))
 
 #%% sanity check for the gradient
 
@@ -134,10 +144,78 @@ checkGradient(flattenParams(X,Theta),Y,R,nu,nm,nf)
 print("\nChecking gradient with lambda = 1.5:")
 checkGradient(flattenParams(X,Theta),Y,R,nu,nm,nf,lam_par=1.5)
 
+#%% load movie Ids
 
+movieList=pd.read_table('data/movie_ids.txt',encoding='latin-1',names=['Info'])
+movieList=pd.DataFrame(movieList.Info.str.split(' ',1).tolist(),columns=['Index','Movie'])
+movieList=movieList.drop(['Index'],axis=1)
 
+#%% add my ratings
+     
+Y_my=np.zeros((nm,1))
+Y_my[0]  =4
+Y_my[97] =2
+Y_my[6]  =3
+Y_my[11] =5
+Y_my[53] =4
+Y_my[63] =5
+Y_my[65] =3
+Y_my[68] =5
+Y_my[182]=4
+Y_my[225]=5
+Y_my[354]=5
 
+# add my ratings to Y matrix, and the relevant columnt to R matrix
+R_my=Y_my>0
+Y=np.hstack((Y,Y_my))
+R=np.hstack((R,R_my))
+nm,nu=Y.shape
 
+#%% normalize data (this is optional)
+
+Ynorm,Ymean=normalizeRatings(Y,R)
+
+#%% generate random initial parameters, Theta and X
+
+X_opt     =np.random.rand(nm,nf)
+Theta_opt =np.random.rand(nu,nf)
+XTheta_opt=flattenParams(X_opt, Theta_opt)
+
+#%% train the model with fmin_cg
+
+result=scipy.optimize.fmin_cg(cofiCostFunc,\
+                              x0=XTheta_opt,\
+                              fprime=cofiGrad,\
+                              args=(Y,R,nu,nm,nf,1.0),\
+                              maxiter=100,\
+                              disp=True,\
+                              full_output=True)
+
+X_opt,Theta_opt=reshapeParams(result[0],nm,nu,nf)
+
+#%% calculate the preditions
+
+pred_all=X_opt.dot(Theta_opt.T)
+
+# If the normalized data was used add back in the mean movie ratings
+#pred_my = pred_all[:,-1]+Ymean.flatten()
+pred_my=pred_all[:,-1]
+
+#%% Sort my predictions from highest to lowest
+
+ind_pred_sort=np.argsort(pred_my)[::-1]
+
+print("Top recommendations for you:")
+for i in range(30):
+    print('Predicting rating %0.1f for movie %s.'\
+          %(pred_my[ind_pred_sort[i]],movieList.Movie[ind_pred_sort[i]]))
+    
+print("\nOriginal ratings provided:")
+for i in range(len(Y_my)):
+    if Y_my[i]>0:
+        print('Rated %d for movie %s.'%(Y_my[i],movieList.Movie[i]))
+
+# NOTE: that the provided ratings fot overwritten! That shouldn't be like that
 
 
 
