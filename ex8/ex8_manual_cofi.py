@@ -179,27 +179,49 @@ Ynorm,Ymean=normalizeRatings(Y,R)
 
 X_opt     =np.random.rand(nm,nf)
 Theta_opt =np.random.rand(nu,nf)
-XTheta_opt=flattenParams(X_opt, Theta_opt)
 
 #%% train the model with fmin_cg
 
-result=scipy.optimize.fmin_cg(cofiCostFunc,\
-                              x0=XTheta_opt,\
-                              fprime=cofiGrad,\
-                              args=(Y,R,nu,nm,nf,1.0),\
-                              maxiter=100,\
-                              disp=True,\
-                              full_output=True)
+XTheta_opt=flattenParams(X_opt,Theta_opt)
 
-X_opt,Theta_opt=reshapeParams(result[0],nm,nu,nf)
+result=scipy.optimize.minimize(cofiCostFunc,\
+                               XTheta_opt,\
+                               args=(Y,R,nu,nm,nf,10.0),\
+                               method='CG',\
+                               tol=1e-7,\
+                               jac=cofiGrad,\
+                               options={'maxiter':100,'disp':True})
+X_opt,Theta_opt=reshapeParams(result.x,nm,nu,nf)
+
+# NB:
+# 1. one can use bounds or constrains to enforce rating to be in the interval
+#    from 0 to 5
+# 2. also it's possible via constraints to enforce that the provided ratings
+#    are preserved
+# 3. such things as normalization and regularization require futher 
+#    investigation as well
 
 #%% calculate the preditions
 
+# If the normalized data was used add back in the mean movie ratings
+#pred_all=X_opt.dot(Theta_opt.T)+Ymean
 pred_all=X_opt.dot(Theta_opt.T)
 
-# If the normalized data was used add back in the mean movie ratings
-#pred_my = pred_all[:,-1]+Ymean.flatten()
+# optionally one can also restore all initial ratings
+i1,i2=np.where(R)
+pred_all[i1,i2]=Y[i1,i2]
+
+# extract my prediction
 pred_my=pred_all[:,-1]
+
+#%% visualize the predicted data
+
+plt.figure()
+plt.imshow(pred_all)
+plt.colorbar()
+plt.ylabel('Movies (%d)'%nm,fontsize=20)
+plt.xlabel('Users (%d)'%nu,fontsize=20)
+plt.show()
 
 #%% Sort my predictions from highest to lowest
 
@@ -215,7 +237,6 @@ for i in range(len(Y_my)):
     if Y_my[i]>0:
         print('Rated %d for movie %s.'%(Y_my[i],movieList.Movie[i]))
 
-# NOTE: that the provided ratings fot overwritten! That shouldn't be like that
 
 
 
