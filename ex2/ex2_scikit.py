@@ -104,6 +104,67 @@ ax.legend()
 fig.show()
 
 #%% PART II
+# load ex2data2.txt - logical regression with two parameters
+    
+data2=pd.read_csv('data/ex2data2.txt',names=['test1','test2','acceptance'])
+y=np.asarray(data2.acceptance)
+x=np.asarray(data2[["test1","test2"]])
+
+#%% visualize data
+
+fig,ax=plotData(x,y)
+ax.legend(['Good','Bad'])
+ax.set_xlabel('test1')
+ax.set_ylabel('test2')
+fig.show()
+
+#%% solution via sklearn
+
+# main parameters to play with are degree and C=1,100,100000
+C=100.0
+degree=6
+
+poly=PolynomialFeatures(degree=degree,include_bias=False)
+scaler=StandardScaler()
+
+X=poly.fit_transform(x)
+X=scaler.fit_transform(X)
+
+regr_log=LogisticRegression(C=C)
+regr_log.fit(X,y)
+
+#%% plot the solution from the previous block
+
+# Plot the decision boundary. For that, we will assign a color to each
+# point in the mesh
+
+# grid
+h=0.01
+x0_min,x0_max=x[:,0].min()-5*h,x[:,0].max()+5*h
+x1_min,x1_max=x[:,1].min()-5*h,x[:,1].max()+5*h
+
+# mesh
+xx0,xx1=np.meshgrid(np.arange(x0_min,x0_max,h),np.arange(x1_min,x1_max,h))
+
+# make poly features and scaling
+XX=poly.fit_transform(np.c_[xx0.ravel(),xx1.ravel()])
+XX=scaler.transform(XX)
+
+# fit every mesh point
+ZZ=regr_log.predict(XX)
+
+# reshape to the origianl shape
+ZZ=ZZ.reshape(xx0.shape)
+
+#%% visualize the decision boundary
+
+fig,ax=plotData(x,y)
+ax.pcolormesh(xx0,xx1,ZZ,cmap="RdYlBu")
+ax.legend(['Good','Bad'])
+ax.set_xlabel('test1')
+ax.set_ylabel('test2')
+ax.set_title('C=%5.2f, accuracy=%5.2f%%'%(C,regr_log.score(X,y)*100))
+fig.show()
 
 
 
