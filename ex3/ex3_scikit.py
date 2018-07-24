@@ -6,18 +6,15 @@ Created on Mon Jul 23 17:36:56 2018
 @author: Anton Buyskikh
 
 @brief: Logistic regression with multi-class classification.
-Neural network method.
 """
 
 #%% libraries
 
 import numpy as np
-import pandas as pd
 import matplotlib.pyplot as plt
-import timeit
 import scipy.io
 
-from sklearn.linear_model import LogisticRegression,LogisticRegressionCV
+from sklearn.linear_model import LogisticRegression
 
 from sklearn.preprocessing import PolynomialFeatures
 
@@ -44,7 +41,6 @@ print('data keys: ',data.keys())
 #%% extract data
 
 y=np.asarray(data['y']).ravel()
-y[y==10]=0
 x=np.asarray(data['X'])
 
 #%% visualize data
@@ -63,6 +59,6 @@ X=poly.fit_transform(x)
 regr_log=LogisticRegression(C=10,solver='liblinear')
 regr_log.fit(X,y)
 
-# accuracy
 print('Training Accuracy: %5.2f%%\n'%(regr_log.score(X,y)*100))
 
+#%% PART II is the same as in ex3_manual.py
