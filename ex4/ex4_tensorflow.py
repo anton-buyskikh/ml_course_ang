@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Tue Jul 24 11:08:26 2018
+Created on Wed Jul 25 18:43:31 2018
 
 @author: Anton Buyskikh
-@brief: Neural network classifier (Scikit-learn)
+@brief: Neural network classifier (TensorFlow)
 """
 
 #%% libraries
@@ -13,8 +13,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import scipy.io
 
-from sklearn.neural_network import MLPClassifier
-from sklearn.preprocessing import PolynomialFeatures
+import tensorflow as tf
 
 #%% functions
 
@@ -48,34 +47,38 @@ print('data    keys: ',data.keys())
 
 y=np.asarray(data['y']).ravel()
 y[y==10]=0 # for some reason they call 0 as 10
-x=np.asarray(data['X'])
+X=np.asarray(data['X'])
 
 #%% visualize data
 
-sample=np.random.randint(0,x.shape[0],50)
-fig,ax=displayData(x[sample,:],y[sample])
+sample=np.random.randint(0,X.shape[0],50)
+fig,ax=displayData(X[sample,:],y[sample])
 fig.show()
 
-#%% add poly features if necessary
+#%% define the basic model
 
-poly=PolynomialFeatures(degree=1,include_bias=False)
-X=poly.fit_transform(x)
+model=tf.keras.models.Sequential([\
+      tf.keras.layers.Flatten(),\
+      tf.keras.layers.Dense(25,activation=tf.nn.relu),\
+      tf.keras.layers.Dropout(0.2),\
+      tf.keras.layers.Dense(10,activation=tf.nn.softmax)])
+    
+model.compile(optimizer='adam',\
+              loss='sparse_categorical_crossentropy',\
+              metrics=['accuracy'])
 
-#%% solution via sklearn
+#%% fit the model
 
-regr_mlp=MLPClassifier(alpha=0.001,
-                       max_iter=2000,
-                       hidden_layer_sizes=(25,),
-                       activation='logistic',
-                       solver='lbfgs')
-regr_mlp.fit(X,y)
+model.fit(X,y,epochs=10)
+accuracy=model.evaluate(X,y)
 
-print('Training Accuracy: %5.2f%%\n'%(regr_mlp.score(X,y)*100))
+print('Training Accuracy: %5.2f%%\n'%(accuracy[1]*100))
 
 #%% Visualize hidden layers
 
-for i in range(regr_mlp.n_layers_-1):
-    fig,ax=displayData(regr_mlp.coefs_[i].T)
-    fig.show()
+weights=model.get_weights()
 
+for i in range(int(len(weights)/2)):
+    fig,ax=displayData(weights[2*i].T)
+    fig.show()
 
